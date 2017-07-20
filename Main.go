@@ -3,22 +3,22 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"OTH/Translate"
+	"github.com/hexya-erp/OTH/Translate"
 )
 
 func main() {
 
-	read, err := ioutil.ReadFile("SourcePython/file.py")
-	if err != nil {
-	fmt.Print(err)
+	read, errr := ioutil.ReadFile("SourcePython/file.py")
+	if errr != nil {
+		fmt.Print(errr)
 	}
 
-	str:= string(read)
+	str := string(read)
 	str = Translate.TransPyToGo(str)
 
-	 error := ioutil.WriteFile("ResultGo/file.go" , []byte(str) , 0644 )
-	if error != nil {
-		fmt.Print(error)
+	errw := ioutil.WriteFile("ResultGo/file.go", []byte(str), 0644)
+	if errw != nil {
+		fmt.Print(errw)
 	}
 
 }
