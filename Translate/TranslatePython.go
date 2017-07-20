@@ -109,12 +109,87 @@ func TransRules() string {
 				switch fieldtype {
 
 				case "Char":
-					result += "pool." + classname + "().AddCharField(" + fieldname + ", models.StringFieldParams{})\n"
+					var body string
+					args := getargsfields(class, line)
+					name := "\"" + strings.Trim(strings.TrimSpace(args[0]), "'") + "\""
+
+					body += "String :" + name
+
+					for i := range args {
+						arg := strings.Trim(args[i], ")")
+						value := strings.Split(arg, "=")
+
+						switch strings.TrimSpace(value[0]) {
+						case "required":
+							body += ", Required: " + strings.ToLower(value[1])
+						case "translate":
+							body += ", Translate: " + strings.ToLower(value[1])
+						case "compute":
+							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+						case "help":
+							body += ", Help: " + value[1]
+						case "index":
+							body += ", Index: " + strings.ToLower(value[1])
+						default:
+							println("Char: " + value[0])
+						}
+					}
+
+					result += "pool." + classname + "().AddCharField(" + fieldname + ", models.StringFieldParams{" + body + "})\n"
 
 				case "Many2one":
-					result += "pool." + classname + "().AddMany2OneField(" + fieldname + ",models.ForeignKeyFieldParams{})\n"
+					var body string
+					var readonly string
+					args := getargsfields(class, line)
+					name := "\"" + strings.Trim(strings.TrimSpace(args[1]), "'") + "\""
+					//foreignkey :=
+
+					body += "String :" + name
+
+					for i := range args {
+						arg := strings.Trim(args[i], ")")
+						value := strings.Split(arg, "=")
+
+						switch strings.TrimSpace(value[0]) {
+						case "required":
+							body += ", Required: " + strings.ToLower(value[1])
+						case "default":
+						case "ondelete":
+							body += ", OnDelete: models." + CamelCase(strings.Trim(value[1], "'"))
+						case "help":
+							body += ", Help: " + value[1]
+						case "index":
+							body += ", Index: " + strings.ToLower(value[1])
+						case "readonly":
+							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
+						case "related":
+							body += ", Related: \"" + CamelCase(strings.Trim(value[1], "'")) + "\""
+						case "store":
+							body += ", Stored: " + strings.ToLower(value[1])
+
+						default:
+							println("Many2One: " + value[0])
+						}
+					}
+					result += "pool." + classname + "().AddMany2OneField(" + fieldname + ",models.ForeignKeyFieldParams{" + body + "})\n"
+					result += readonly
 
 				case "One2many":
+					var body string
+					args := getargsfields(class, line)
+					name := "\"" + strings.Trim(strings.TrimSpace(args[1]), "'") + "\""
+
+					body += "String :" + name
+
+					for i := range args {
+						arg := strings.Trim(args[i], ")")
+						value := strings.Split(arg, "=")
+
+						switch strings.TrimSpace(value[0]) {
+						default:
+							println("One2Many: " + value[0])
+						}
+					}
 					result += "pool." + classname + "().AddOne2ManyField(" + fieldname + ", models.ReverseFieldParams{})\n"
 
 				case "Selection":
@@ -181,9 +256,9 @@ func TransRules() string {
 				for ok := true; ok; ok = rawcode[class][line+i][0] != "def" {
 
 					body += "//"
-					for w := range rawcode[class][line+i] {
+					for w := range rawcode[class][line+i-1] {
 
-						body += rawcode[class][line+i][w]
+						body += rawcode[class][line+i-1][w]
 						body += " "
 					}
 					body += "\n"
@@ -200,7 +275,7 @@ func TransRules() string {
 				result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
 					"\n`" + name + "` ," +
 					"\nfunc (){" +
-					body+"})\n"
+					body + "})\n"
 			}
 
 		}
@@ -223,6 +298,9 @@ func CamelCase(onestring string) string {
 		} else if string(onestring[c]) == "_" {
 			uppercase = true
 		} else {
+			if string(onestring[c]) == "." {
+				uppercase = true
+			}
 			result += string(onestring[c])
 		}
 	}
@@ -251,5 +329,30 @@ func getArgSqlConstraint(arg string) string {
 	result = "\"" + result + "\""
 
 	return result
+}
 
+func getargsfields(c int, l int) []string {
+	var result []string
+	var s string
+	var count = 0
+	ok := false
+
+	for ok == false {
+		for w := range rawcode[c][l+count] {
+			s += " "
+			s += rawcode[c][l+count][w]
+		}
+		if string(s[len(s)-1]) != ")" {
+			count += 1
+		} else {
+			ok = true
+		}
+	}
+
+	s = strings.TrimSpace(s)
+
+	cut := strings.Split(s, "(")
+	result = strings.Split(cut[1], ",")
+
+	return result
 }
