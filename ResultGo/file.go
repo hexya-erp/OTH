@@ -1,9 +1,6 @@
 package product
 
-import (
- "github.com/hexya-erp/hexya/pool"
- "github.com/hexya-erp/hexya/hexya/models"
-)
+import "github.com/hexya-erp/hexya/pool"
 
 func init() {
 
@@ -12,11 +9,12 @@ func init() {
 pool.Pricelist().DeclareModel()
 pool.Pricelist().Method().GetDefaultCurrencyId().DeclareMethod(
 `GetDefaultCurrencyId` ,
-func (){//return self.env.user.company_id.currency_id.id 
+func (){//def _get_default_currency_id(self): 
 })
 pool.Pricelist().Method().GetDefaultItemIds().DeclareMethod(
 `GetDefaultItemIds` ,
-func (){//ProductPricelistItem = self.env['product.pricelist.item'] 
+func (){//def _get_default_item_ids(self): 
+//ProductPricelistItem = self.env['product.pricelist.item'] 
 //vals = ProductPricelistItem.default_get(ProductPricelistItem._fields.keys()) 
 //vals.update(compute_price='formula') 
 //return [[0, False, vals]] 
@@ -30,23 +28,23 @@ func (){//ProductPricelistItem = self.env['product.pricelist.item']
 //sequence = fields.Integer(default=16) 
 //country_group_ids = fields.Many2many('res.country.group', 'res_country_group_pricelist_rel', 
 //'pricelist_id', 'res_country_group_id', string='Country Groups') 
-//@api.multi 
 })
-pool.Pricelist().AddCharField("Name", models.StringFieldParams{})
-pool.Pricelist().AddBooleanField("Active", models.SimpleFieldParams{})
-pool.Pricelist().AddOne2ManyField("ItemIds", models.ReverseFieldParams{})
-pool.Pricelist().AddMany2OneField("CurrencyId",models.ForeignKeyFieldParams{})
-pool.Pricelist().AddMany2OneField("CompanyId",models.ForeignKeyFieldParams{})
-pool.Pricelist().AddIntegerField("Sequence", models.SimpleFieldParams{})
+pool.Pricelist().AddCharField("Name", models.StringFieldParams{String :"Pricelist Name", Required: true, Translate: true})
+pool.Pricelist().AddBooleanField("Active", models.SimpleFieldParams{String :"Active", Default: func(models.Environment, models.FieldMap) interface{} {return true}, Help: "If unchecked,  it will allow you to hide the pricelist without removing it."})
+pool.Pricelist().AddOne2ManyField("ItemIds", models.ReverseFieldParams{String :"pricelist_id", NoCopy: false, Default: GetDefaultItemIds})
+pool.Pricelist().AddMany2OneField("CurrencyId",models.ForeignKeyFieldParams{String :"Currency" , RelationModel: pool.Res.Currency(), Default: GetDefaultCurrencyId, Required: true})
+pool.Pricelist().AddMany2OneField("CompanyId",models.ForeignKeyFieldParams{String :"Company')" , RelationModel: pool.Res.Company()})
+pool.Pricelist().AddIntegerField("Sequence", models.SimpleFieldParams{String :"default=16)", Default: func(models.Environment, models.FieldMap) interface{} {return 16}})
 pool.Pricelist().AddMany2ManyField("CountryGroupIds", models.Many2ManyFieldParams{})
 pool.Pricelist().Method().NameGet().DeclareMethod(
 `NameGet` ,
-func (){//return [(pricelist.id, '%s (%s)' % (pricelist.name, pricelist.currency_id.name)) for pricelist in self] 
-//@api.model 
+func (){//def name_get(self): 
+//return [(pricelist.id, '%s (%s)' % (pricelist.name, pricelist.currency_id.name)) for pricelist in self] 
 })
 pool.Pricelist().Method().NameSearch().DeclareMethod(
 `NameSearch` ,
-func (){//if name and operator == '=' and not args: 
+func (){//def name_search(self, name, args=None, operator='ilike', limit=100): 
+//if name and operator == '=' and not args: 
 //# search on the name of the pricelist and its currency, opposite of name_get(), 
 //# Used by the magic context filter in the product search view. 
 //query_args = {'name': name, 'limit': limit, 'lang': self._context.get('lang') or 'en_US'} 
@@ -81,11 +79,11 @@ func (){//if name and operator == '=' and not args:
 //pricelists = self.search([('id', 'in', ids)], limit=limit) 
 //if pricelists: 
 //return pricelists.name_get() 
-//return super(Pricelist, self).name_search(name, args, operator=operator, limit=limit) 
 })
 pool.Pricelist().Method().ComputePriceRuleMulti().DeclareMethod(
 `ComputePriceRuleMulti` ,
-func (){//""" Low-level method - Multi pricelist, multi products 
+func (){//def _compute_price_rule_multi(self, products_qty_partner, date=False, uom_id=False): 
+//""" Low-level method - Multi pricelist, multi products 
 //Returns: dict{product_id: dict{pricelist_id: (price, suitable_rule)} }""" 
 //if not self.ids: 
 //pricelists = self.search([]) 
@@ -98,11 +96,11 @@ func (){//""" Low-level method - Multi pricelist, multi products
 //results.setdefault(product_id, {}) 
 //results[product_id][pricelist.id] = price 
 //return results 
-//@api.multi 
 })
 pool.Pricelist().Method().ComputePriceRule().DeclareMethod(
 `ComputePriceRule` ,
-func (){//""" Low-level method - Mono pricelist, multi products 
+func (){//def _compute_price_rule(self, products_qty_partner, date=False, uom_id=False): 
+//""" Low-level method - Mono pricelist, multi products 
 //Returns: dict{product_id: (price, suitable_rule) for the given pricelist} 
 //If date in context: Date of the pricelist (%Y-%m-%d) 
 //:param products_qty_partner: list of typles products, quantity, partner 
@@ -233,62 +231,62 @@ func (){//""" Low-level method - Mono pricelist, multi products
 //price = product.currency_id.compute(price, self.currency_id, round=False) 
 //results[product.id] = (price, suitable_rule and suitable_rule.id or False) 
 //return results 
-//# New methods: product based 
 })
 pool.Pricelist().Method().GetProductsPrice().DeclareMethod(
 `GetProductsPrice` ,
-func (){//""" For a given pricelist, return price for products 
+func (){//def get_products_price(self, products, quantities, partners, date=False, uom_id=False): 
+//""" For a given pricelist, return price for products 
 //Returns: dict{product_id: product price}, in the given pricelist """ 
 //self.ensure_one() 
-//return dict((product_id, res_tuple[0]) for product_id, res_tuple in self._compute_price_rule(zip(products, quantities, partners), date=date, uom_id=uom_id).iteritems()) 
 })
 pool.Pricelist().Method().GetProductPrice().DeclareMethod(
 `GetProductPrice` ,
-func (){//""" For a given pricelist, return price for a given product """ 
+func (){//def get_product_price(self, product, quantity, partner, date=False, uom_id=False): 
+//""" For a given pricelist, return price for a given product """ 
 //self.ensure_one() 
-//return self._compute_price_rule([(product, quantity, partner)], date=date, uom_id=uom_id)[product.id][0] 
 })
 pool.Pricelist().Method().GetProductPriceRule().DeclareMethod(
 `GetProductPriceRule` ,
-func (){//""" For a given pricelist, return price and rule for a given product """ 
+func (){//def get_product_price_rule(self, product, quantity, partner, date=False, uom_id=False): 
+//""" For a given pricelist, return price and rule for a given product """ 
 //self.ensure_one() 
 //return self._compute_price_rule([(product, quantity, partner)], date=date, uom_id=uom_id)[product.id] 
 //# Compatibility to remove after v10 - DEPRECATED 
-//@api.model 
 })
 pool.Pricelist().Method().PriceRuleGetMulti().DeclareMethod(
 `PriceRuleGetMulti` ,
-func (){//""" Low level method computing the result tuple for a given pricelist and multi products - return tuple """ 
+func (){//def _price_rule_get_multi(self, pricelist, products_by_qty_by_partner): 
+//""" Low level method computing the result tuple for a given pricelist and multi products - return tuple """ 
 //return pricelist._compute_price_rule(products_by_qty_by_partner) 
-//@api.multi 
 })
 pool.Pricelist().Method().PriceGet().DeclareMethod(
 `PriceGet` ,
-func (){//""" Multi pricelist, mono product - returns price per pricelist """ 
+func (){//def price_get(self, prod_id, qty, partner=None): 
+//""" Multi pricelist, mono product - returns price per pricelist """ 
 //return dict((key, price[0]) for key, price in self.price_rule_get(prod_id, qty, partner=partner).items()) 
-//@api.multi 
 })
 pool.Pricelist().Method().PriceRuleGetMulti().DeclareMethod(
 `PriceRuleGetMulti` ,
-func (){//""" Multi pricelist, multi product  - return tuple """ 
+func (){//def price_rule_get_multi(self, products_by_qty_by_partner): 
+//""" Multi pricelist, multi product  - return tuple """ 
 //return self._compute_price_rule_multi(products_by_qty_by_partner) 
-//@api.multi 
 })
 pool.Pricelist().Method().PriceRuleGet().DeclareMethod(
 `PriceRuleGet` ,
-func (){//""" Multi pricelist, mono product - return tuple """ 
+func (){//def price_rule_get(self, prod_id, qty, partner=None): 
+//""" Multi pricelist, mono product - return tuple """ 
 //product = self.env['product.product'].browse([prod_id]) 
 //return self._compute_price_rule_multi([(product, qty, partner)])[prod_id] 
-//@api.model 
 })
 pool.Pricelist().Method().PriceGetMulti().DeclareMethod(
 `PriceGetMulti` ,
-func (){//""" Mono pricelist, multi product - return price per product """ 
-//return pricelist.get_products_price(zip(**products_by_qty_by_partner)) 
+func (){//def _price_get_multi(self, pricelist, products_by_qty_by_partner): 
+//""" Mono pricelist, multi product - return price per product """ 
 })
 pool.Pricelist().Method().GetPartnerPricelist().DeclareMethod(
 `GetPartnerPricelist` ,
-func (){//""" Retrieve the applicable pricelist for a given partner in a given company. 
+func (){//def _get_partner_pricelist(self, partner_id, company_id=None): 
+//""" Retrieve the applicable pricelist for a given partner in a given company. 
 //:param company_id: if passed, used for looking up properties, 
 //instead of current user's company 
 //""" 
@@ -312,7 +310,6 @@ func (){//""" Retrieve the applicable pricelist for a given partner in a given c
 //if not pl: 
 //pls = self.env['product.pricelist'].search([], limit=1) 
 //pl = pls and pls[0].id 
-//return pl 
 })
 
 
@@ -321,48 +318,51 @@ pool.ResCountryGroup().AddMany2ManyField("PricelistIds", models.Many2ManyFieldPa
 
 
 pool.PricelistItem().DeclareModel()
-pool.PricelistItem().AddMany2OneField("ProductTmplId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddMany2OneField("ProductId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddMany2OneField("CategId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddIntegerField("MinQuantity", models.SimpleFieldParams{})
+pool.PricelistItem().AddMany2OneField("ProductTmplId",models.ForeignKeyFieldParams{String :"Product Template" , RelationModel: pool.Product.Template(), OnDelete: models.Cascade, Help: "Specify a template if this rule only applies to one product template. Keep empty otherwise."})
+pool.PricelistItem().AddMany2OneField("ProductId",models.ForeignKeyFieldParams{String :"Product" , RelationModel: pool.Product.Product(), OnDelete: models.Cascade, Help: "Specify a product if this rule only applies to one product. Keep empty otherwise."})
+pool.PricelistItem().AddMany2OneField("CategId",models.ForeignKeyFieldParams{String :"Product Category" , RelationModel: pool.Product.Category(), OnDelete: models.Cascade, Help: "Specify a product category if this rule only applies to products belonging to this category or its children categories. Keep empty otherwise."})
+pool.PricelistItem().AddIntegerField("MinQuantity", models.SimpleFieldParams{String :"Min. Quantity", Default: func(models.Environment, models.FieldMap) interface{} {return 1}, Help: "For the rule to apply,  bought/sold quantity must be greater " "than or equal to the minimum quantity specified in this field.\n" "Expressed in the default unit of measure of the product."})
 pool.PricelistItem().AddSelectionField("AppliedOn", models.SelectionFieldParams{})
-pool.PricelistItem().AddIntegerField("Sequence", models.SimpleFieldParams{})
+pool.PricelistItem().AddIntegerField("Sequence", models.SimpleFieldParams{String :"Sequence", Default: func(models.Environment, models.FieldMap) interface{} {return 5}, Required: true, Help: "Gives the order in which the pricelist items will be checked. The evaluation gives highest priority to lowest sequence and stops as soon as a matching item is found."})
 pool.PricelistItem().AddSelectionField("Base", models.SelectionFieldParams{})
-pool.PricelistItem().AddMany2OneField("BasePricelistId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddMany2OneField("PricelistId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddFloatField("PriceSurcharge", models.FloatFieldParams{})
-pool.PricelistItem().AddFloatField("PriceDiscount", models.FloatFieldParams{})
-pool.PricelistItem().AddFloatField("PriceRound", models.FloatFieldParams{})
-pool.PricelistItem().AddFloatField("PriceMinMargin", models.FloatFieldParams{})
-pool.PricelistItem().AddFloatField("PriceMaxMargin", models.FloatFieldParams{})
-pool.PricelistItem().AddMany2OneField("CompanyId",models.ForeignKeyFieldParams{})
-pool.PricelistItem().AddMany2OneField("CurrencyId",models.ForeignKeyFieldParams{})
+pool.PricelistItem().AddMany2OneField("BasePricelistId",models.ForeignKeyFieldParams{String :"Other Pricelist')" , RelationModel: pool.Product.Pricelist()})
+pool.PricelistItem().AddMany2OneField("PricelistId",models.ForeignKeyFieldParams{String :"Pricelist" , RelationModel: pool.Product.Pricelist(), Index: true, OnDelete: models.Cascade})
+pool.PricelistItem().AddFloatField("PriceSurcharge", models.FloatFieldParams{String :"Price Surcharge"})
+pool.PricelistItem().AddFloatField("PriceDiscount", models.FloatFieldParams{String :"Price Discount", Default: func(models.Environment, models.FieldMap) interface{} {return 0}})
+pool.PricelistItem().AddFloatField("PriceRound", models.FloatFieldParams{String :"Price Rounding"})
+pool.PricelistItem().AddFloatField("PriceMinMargin", models.FloatFieldParams{String :"Min. Price Margin"})
+pool.PricelistItem().AddFloatField("PriceMaxMargin", models.FloatFieldParams{String :"Max. Price Margin"})
+pool.PricelistItem().AddMany2OneField("CompanyId",models.ForeignKeyFieldParams{String :"Company" , RelationModel: pool.Res.Company(), Related: "PricelistId.CompanyId", Stored: true})
+pool.PricelistItem().Fields().CompanyId().RevokeAccess(security.GroupEveryone, security.Write)
+pool.PricelistItem().AddMany2OneField("CurrencyId",models.ForeignKeyFieldParams{String :"Currency" , RelationModel: pool.Res.Currency(), Related: "PricelistId.CurrencyId", Stored: true})
+pool.PricelistItem().Fields().CurrencyId().RevokeAccess(security.GroupEveryone, security.Write)
 pool.PricelistItem().AddDateField("DateStart", models.SimpleFieldParams{})
 pool.PricelistItem().AddDateField("DateEnd", models.SimpleFieldParams{})
 pool.PricelistItem().AddSelectionField("ComputePrice", models.SelectionFieldParams{})
-pool.PricelistItem().AddFloatField("FixedPrice", models.FloatFieldParams{})
-pool.PricelistItem().AddFloatField("PercentPrice", models.FloatFieldParams{})
-pool.PricelistItem().AddCharField("Name", models.StringFieldParams{})
-pool.PricelistItem().AddCharField("Price", models.StringFieldParams{})
+pool.PricelistItem().AddFloatField("FixedPrice", models.FloatFieldParams{String :"Fixed Price"})
+pool.PricelistItem().AddFloatField("PercentPrice", models.FloatFieldParams{String :"Percentage Price')"})
+pool.PricelistItem().AddCharField("Name", models.StringFieldParams{String :"Name", Compute: "GetPricelistItemNamePrice", Help: "Explicit rule name for this pricelist line."})
+pool.PricelistItem().AddCharField("Price", models.StringFieldParams{String :"Price", Compute: "GetPricelistItemNamePrice", Help: "Explicit rule name for this pricelist line."})
 pool.PricelistItem().Method().CheckRecursion().DeclareMethod(
 `CheckRecursion` ,
-func (){//if any(item.base == 'pricelist' and item.pricelist_id and item.pricelist_id == item.base_pricelist_id for item in self): 
+func (){//def _check_recursion(self): 
+//if any(item.base == 'pricelist' and item.pricelist_id and item.pricelist_id == item.base_pricelist_id for item in self): 
 //raise ValidationError(_('Error! You cannot assign the Main Pricelist as Other Pricelist in PriceList Item!')) 
 //return True 
-//@api.constrains('price_min_margin', 'price_max_margin') 
 })
 pool.PricelistItem().Method().CheckMargin().DeclareMethod(
 `CheckMargin` ,
-func (){//if any(item.price_min_margin > item.price_max_margin for item in self): 
+func (){//def _check_margin(self): 
+//if any(item.price_min_margin > item.price_max_margin for item in self): 
 //raise ValidationError(_('Error! The minimum margin should be lower than the maximum margin.')) 
 //return True 
 //@api.one 
 //@api.depends('categ_id', 'product_tmpl_id', 'product_id', 'compute_price', 'fixed_price', \ 
-//'pricelist_id', 'percent_price', 'price_discount', 'price_surcharge') 
 })
 pool.PricelistItem().Method().GetPricelistItemNamePrice().DeclareMethod(
 `GetPricelistItemNamePrice` ,
-func (){//if self.categ_id: 
+func (){//def _get_pricelist_item_name_price(self): 
+//if self.categ_id: 
 //self.name = _("Category: %s") % (self.categ_id.name) 
 //elif self.product_tmpl_id: 
 //self.name = self.product_tmpl_id.name 
@@ -376,21 +376,21 @@ func (){//if self.categ_id:
 //self.price = _("%s %% discount") % (self.percent_price) 
 //else: 
 //self.price = _("%s %% discount and %s surcharge") % (abs(self.price_discount), self.price_surcharge) 
-//@api.onchange('applied_on') 
 })
 pool.PricelistItem().Method().OnchangeAppliedOn().DeclareMethod(
 `OnchangeAppliedOn` ,
-func (){//if self.applied_on != '0_product_variant': 
+func (){//def _onchange_applied_on(self): 
+//if self.applied_on != '0_product_variant': 
 //self.product_id = False 
 //if self.applied_on != '1_product': 
 //self.product_tmpl_id = False 
 //if self.applied_on != '2_product_category': 
 //self.categ_id = False 
-//@api.onchange('compute_price') 
 })
 pool.PricelistItem().Method().OnchangeComputePrice().DeclareMethod(
 `OnchangeComputePrice` ,
-func (){//if self.compute_price != 'fixed': 
+func (){//def _onchange_compute_price(self): 
+//if self.compute_price != 'fixed': 
 //self.fixed_price = 0.0 
 //if self.compute_price != 'percentage': 
 //self.percent_price = 0.0 
@@ -401,7 +401,6 @@ func (){//if self.compute_price != 'fixed':
 //'price_round': 0.0, 
 //'price_min_margin': 0.0, 
 //'price_max_margin': 0.0, 
-//}) 
 })
  
  }
