@@ -10,6 +10,7 @@ import (
 var packagename string
 var packagenameset bool = false
 var rawcode [][][]string
+var imports string
 
 func TransPyToGo(str string) string {
 
@@ -18,7 +19,7 @@ func TransPyToGo(str string) string {
 	GenerateSlices(str)
 	content = TransRules()
 
-	var result string = "package " + packagename + " \n\n func init() { \n\n " + content + " \n }"
+	var result string = "package " + packagename + " \n\n  import (\n" + imports + "\n) \n\n func init() { \n\n " + content + " \n }"
 
 	return result
 
@@ -71,7 +72,7 @@ func GenerateSlices(str string) {
 func TransRules() string {
 
 	var result string
-
+	var selectionimportset bool = false
 	for class := range rawcode {
 		getclassname := strings.Split(rawcode[class][0][0], "(")
 		classname := getclassname[0]
@@ -110,9 +111,13 @@ func TransRules() string {
 				case "Char":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -160,7 +165,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							//println("Char: " + value[0])
+							println("Char: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddCharField(" + fieldname + ", models.StringFieldParams{" + body + "})\n"
@@ -169,7 +174,12 @@ func TransRules() string {
 					var body string
 					var readonly string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
+					name:=""
+					if string(args[1][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
+					}else {
+						name = fieldname
+					}
 					foreignkey := CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'"))
 
 					for i := range args {
@@ -225,7 +235,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							//println("Many2One: " + value[0])
+							println("Many2One: " + value[0])
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
@@ -235,9 +245,13 @@ func TransRules() string {
 				case "One2many":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[2])) + "\""
-
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -253,12 +267,17 @@ func TransRules() string {
 						case "default":
 							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 						default:
-							//println("One2Many: " + value[0])
+							println("One2Many: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddOne2ManyField(" + fieldname + ", models.ReverseFieldParams{" + body + "})\n"
 
 				case "Selection":
+					if selectionimportset == false {
+						imports += "\"github.com/hexya-erp/hexya/hexya/models/types\"\n"
+						selectionimportset = true
+					}
+
 					var body string
 					var s string
 					var count = 0
@@ -281,54 +300,63 @@ func TransRules() string {
 					cut2 := strings.Split(cut[1], "]")
 					args := strings.Split(cut2[1], ",")
 					selectable := strings.Split(cut2[0], ")")
-					name := "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
-					body += "String :" + name
+
+					name:=""
+					if string(args[1][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
+
 					body += ", Selection : types.Selection{"
 					var i = 0
 					for i < len(selectable)-1 {
 						oneselectable := strings.Split(strings.Trim(selectable[i], ","), ",")
 
 						n := TrimString(strings.TrimLeft(strings.TrimSpace(oneselectable[0]), "("))
-						v:= CamelCase(TrimString(strings.TrimLeft(strings.TrimSpace(oneselectable[0]), "(")))
+						v := CamelCase(TrimString(strings.TrimLeft(strings.TrimSpace(oneselectable[0]), "(")))
 
-						body+= "\n \""+n+"\" : \""+v+"\","
+						body += "\n \"" + n + "\" : \"" + v + "\","
 						i += 1
 					}
-					body+= "\n}"
+					body += "\n}"
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
 						value := strings.Split(arg, "=")
-
 						switch strings.TrimSpace(value[0]) {
-						//case "help":
-						//	help := GetHelpText(class, line)
-						//	for i := range help {
-						//		println(help[i])
-						//		if  len(help[i]) < 4 && help[i][len(help[i])-4:] == "help" {
-						//
-						//			regex, err := regexp.Compile("\"")
-						//			if err != nil {
-						//				return err.Error()
-						//			}
-						//			cut := help[i+1]
-						//			cut = regex.ReplaceAllString(cut, "")
-						//			body += " , Help :\"" + cut + "\""
-						//		}
-						//	}
-						//case "default":
+						case "help":
+							body += ", Help : \"" + TrimString(value[1]) + "\""
+						case "default":
 							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
-
+						case "required":
+							body += ", Required: " + strings.ToLower(value[1])
+						case "index":
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Index: false"
+								} else {
+									body += ", Index: true"
+								}
+							} else {
+								body += ", Index: " + strings.ToLower(value[1])
+							}
 						default:
-							//println("selection: " + value[0])
+							println("selection: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddSelectionField(" + fieldname + ", models.SelectionFieldParams{" + body + "})\n"
 				case "Integer":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -368,7 +396,7 @@ func TransRules() string {
 							body += ", Compute : pool." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						default:
-							//println("Integer: " + value[0])
+							println("Integer: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddIntegerField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -379,8 +407,13 @@ func TransRules() string {
 				case "Float":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -414,7 +447,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							//println("Float: " + value[0])
+							println("Float: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddFloatField(" + fieldname + ", models.FloatFieldParams{" + body + "})\n"
@@ -422,8 +455,13 @@ func TransRules() string {
 				case "Boolean":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -457,7 +495,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							//println("Boolean: " + value[0])
+							println("Boolean: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddBooleanField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -465,7 +503,13 @@ func TransRules() string {
 				case "Many2many":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
+					name:=""
+					if string(args[1][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
+					}else {
+						name = fieldname
+					}
+
 					foreignkey := CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'"))
 
 					for i := range args {
@@ -480,7 +524,7 @@ func TransRules() string {
 						case "compute":
 							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
 						default:
-							//println("Many2Many: " + value[0])
+							println("Many2Many: " + value[0])
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
@@ -489,8 +533,13 @@ func TransRules() string {
 				case "Binary":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -520,7 +569,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							//println("Binary: " + value[0])
+							println("Binary: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddBinaryField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -528,8 +577,13 @@ func TransRules() string {
 				case "Date":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -553,7 +607,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							//println("Date: " + value[0])
+							println("Date: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddDateField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -561,8 +615,13 @@ func TransRules() string {
 				case "DateTime":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -585,7 +644,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							//println("DateTime: " + value[0])
+							println("DateTime: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddDateTimeField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -593,8 +652,13 @@ func TransRules() string {
 				case "Text":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -602,7 +666,7 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 						default:
-							//println("Text: " + value[0])
+							println("Text: " + value[0])
 						}
 					}
 
@@ -611,8 +675,13 @@ func TransRules() string {
 				case "Html":
 					var body string
 					args := GetArgsFields(class, line)
-					name := "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					body += "String :" + name
+					name:=""
+					if string(args[0][1]) == "'" {
+						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
+					}else {
+						name = fieldname
+					}
+					body += "String :" +name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -637,13 +706,13 @@ func TransRules() string {
 							}
 
 						default:
-							//println("Html: " + value[0])
+							println("Html: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddHTMLField(" + fieldname + " , models.StringFieldParams{})\n"
 
 				default:
-					//println(fieldtype)
+					println(fieldtype)
 
 				}
 
@@ -658,10 +727,21 @@ func TransRules() string {
 					}
 					args := strings.Split(thisline, ",")
 
+					if len(args) > 3 {
+						i := 2
+						var sqlstring = CamelCase(args[1])
+						for string(sqlstring[len(sqlstring)-2]) != ")" {
+							sqlstring += "," + CamelCase(args[i])
+							i++
+						}
+						args[1] = sqlstring
+						args[2] = strings.TrimRight(strings.TrimLeft(args[len(args)-1], "("), ")")
+					}
+
 					name := GetArgsSqlConstraint(args[0])
 					sql := GetArgsSqlConstraint(args[1])
 					errorstring := GetArgsSqlConstraint(args[2])
-					result += "pool." + classname + "().AddSQLConstraint(" + name + " , " + sql + " , (" + errorstring + "))\n"
+					result += "pool." + classname + "().AddSQLConstraint(" + name + " , " + sql + " , " + errorstring + ")\n"
 
 					count += 1
 				}
@@ -731,20 +811,19 @@ func GetArgsSqlConstraint(arg string) string {
 	var result string
 	r := regexp.MustCompile(`'(.+)?'`)
 
-	for i := range arg {
-		if string(arg[i]) == "'" {
+	for c := range arg {
+		if string(arg[c]) == "'" {
 			r = regexp.MustCompile(`'(.+)?'`)
 			break
 		}
-		if string(arg[i]) == "\"" {
+		if string(arg[c]) == "\"" {
 			r = regexp.MustCompile(`"(.+)?"`)
 			break
 		}
 	}
 
 	res := r.FindStringSubmatch(arg)
-	result = CamelCase(res[1])
-	result = "\"" + result + "\""
+	result = "\"" + CamelCase(res[1]) + "\""
 
 	return result
 }
