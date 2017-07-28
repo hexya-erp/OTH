@@ -111,13 +111,14 @@ func TransRules() string {
 				case "Char":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -165,7 +166,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							println("Char: " + value[0])
+							//println("Char: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddCharField(" + fieldname + ", models.StringFieldParams{" + body + "})\n"
@@ -174,10 +175,11 @@ func TransRules() string {
 					var body string
 					var readonly string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[1][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
-					}else {
+					name := ""
+					args[1] = strings.TrimSpace(args[1])
+					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
+						name = "\"" + TrimString(args[1]) + "\""
+					} else {
 						name = fieldname
 					}
 					foreignkey := CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'"))
@@ -190,8 +192,11 @@ func TransRules() string {
 						case "required":
 							body += ", Required: " + strings.ToLower(value[1])
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
-
+							if string(value[1][0]) == "_" {
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+							} else {
+								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							}
 						case "ondelete":
 							body += ", OnDelete : models." + CamelCase(TrimString(value[1]))
 						case "help":
@@ -235,7 +240,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							println("Many2One: " + value[0])
+							//println("Many2One: " + value[0])
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
@@ -245,13 +250,17 @@ func TransRules() string {
 				case "One2many":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					println(args[0])
+					args[2] = strings.TrimSpace(args[2])
+					if string(args[2][0]) == "'" || string(args[2][0]) == "\"" {
+						name = "\"" + TrimString(args[2]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
+					body += " ,RelationModel : pool." + CamelCase(TrimString(strings.TrimSpace(args[0])))
+					body += " ,ReverseFK : \"" + CamelCase(TrimString(strings.TrimSpace(args[1]))) + "\""
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -265,9 +274,13 @@ func TransRules() string {
 								body += ", NoCopy: true"
 							}
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							if string(value[1][0]) == "_" {
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+							} else {
+								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							}
 						default:
-							println("One2Many: " + value[0])
+							//println("One2Many: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddOne2ManyField(" + fieldname + ", models.ReverseFieldParams{" + body + "})\n"
@@ -299,26 +312,22 @@ func TransRules() string {
 					cut := strings.Split(s, "[")
 					cut2 := strings.Split(cut[1], "]")
 					args := strings.Split(cut2[1], ",")
-					selectable := strings.Split(cut2[0], ")")
+					selectable := strings.Split(cut2[0], "'")
 
-					name:=""
-					if string(args[1][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
-					}else {
+					name := ""
+					args[1] = strings.TrimSpace(args[1])
+					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
+						name = "\"" + TrimString(args[1]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					body += ", Selection : types.Selection{"
-					var i = 0
-					for i < len(selectable)-1 {
-						oneselectable := strings.Split(strings.Trim(selectable[i], ","), ",")
-
-						n := TrimString(strings.TrimLeft(strings.TrimSpace(oneselectable[0]), "("))
-						v := CamelCase(TrimString(strings.TrimLeft(strings.TrimSpace(oneselectable[0]), "(")))
-
-						body += "\n \"" + n + "\" : \"" + v + "\","
-						i += 1
+					var i = 1
+					for i < len(selectable)-3 {
+						body += "\n \"" + strings.TrimSpace(selectable[i]) + "\" : \"" + strings.TrimSpace(selectable[i+2]) + "\","
+						i += 4
 					}
 					body += "\n}"
 
@@ -329,7 +338,7 @@ func TransRules() string {
 						case "help":
 							body += ", Help : \"" + TrimString(value[1]) + "\""
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
+								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
 						case "required":
 							body += ", Required: " + strings.ToLower(value[1])
 						case "index":
@@ -343,20 +352,21 @@ func TransRules() string {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
 						default:
-							println("selection: " + value[0])
+							//println("selection: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddSelectionField(" + fieldname + ", models.SelectionFieldParams{" + body + "})\n"
 				case "Integer":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -379,7 +389,11 @@ func TransRules() string {
 								}
 							}
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							if string(value[1][0]) == "_" {
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+							} else {
+								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							}
 						case "required":
 							body += ", Required: " + strings.ToLower(value[1])
 						case "index":
@@ -396,7 +410,7 @@ func TransRules() string {
 							body += ", Compute : pool." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						default:
-							println("Integer: " + value[0])
+							//println("Integer: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddIntegerField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -407,13 +421,15 @@ func TransRules() string {
 				case "Float":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -421,7 +437,11 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							if string(value[1][0]) == "_" {
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+							} else {
+								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+							}
 						case "digits":
 							//TODO
 						case "compute":
@@ -447,7 +467,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							println("Float: " + value[0])
+							//println("Float: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddFloatField(" + fieldname + ", models.FloatFieldParams{" + body + "})\n"
@@ -455,13 +475,14 @@ func TransRules() string {
 				case "Boolean":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -495,7 +516,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							println("Boolean: " + value[0])
+							//println("Boolean: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddBooleanField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -503,10 +524,11 @@ func TransRules() string {
 				case "Many2many":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[1][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[1])) + "\""
-					}else {
+					name := ""
+					args[1] = strings.TrimSpace(args[1])
+					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
+						name = "\"" + TrimString(args[1]) + "\""
+					} else {
 						name = fieldname
 					}
 
@@ -524,7 +546,7 @@ func TransRules() string {
 						case "compute":
 							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
 						default:
-							println("Many2Many: " + value[0])
+							//println("Many2Many: " + value[0])
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
@@ -533,13 +555,14 @@ func TransRules() string {
 				case "Binary":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -569,7 +592,7 @@ func TransRules() string {
 							//TODO
 
 						default:
-							println("Binary: " + value[0])
+							//println("Binary: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddBinaryField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -577,13 +600,14 @@ func TransRules() string {
 				case "Date":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -607,7 +631,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							println("Date: " + value[0])
+							//println("Date: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddDateField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -615,13 +639,14 @@ func TransRules() string {
 				case "DateTime":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -644,7 +669,7 @@ func TransRules() string {
 								}
 							}
 						default:
-							println("DateTime: " + value[0])
+							//println("DateTime: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddDateTimeField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
@@ -652,13 +677,14 @@ func TransRules() string {
 				case "Text":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -666,7 +692,7 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 						default:
-							println("Text: " + value[0])
+							//println("Text: " + value[0])
 						}
 					}
 
@@ -675,13 +701,14 @@ func TransRules() string {
 				case "Html":
 					var body string
 					args := GetArgsFields(class, line)
-					name:=""
-					if string(args[0][1]) == "'" {
-						name = "\"" + TrimString(strings.TrimSpace(args[0])) + "\""
-					}else {
+					name := ""
+					args[0] = strings.TrimSpace(args[0])
+					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
+						name = "\"" + TrimString(args[0]) + "\""
+					} else {
 						name = fieldname
 					}
-					body += "String :" +name
+					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -706,13 +733,13 @@ func TransRules() string {
 							}
 
 						default:
-							println("Html: " + value[0])
+							//println("Html: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddHTMLField(" + fieldname + " , models.StringFieldParams{})\n"
 
 				default:
-					println(fieldtype)
+					//println(fieldtype)
 
 				}
 
@@ -793,14 +820,13 @@ func CamelCase(onestring string) string {
 
 			result += string(unicode.ToUpper(rune(onestring[c])))
 			uppercase = false
-		} else if string(onestring[c]) == "_" {
-			uppercase = true
-		} else {
-			if string(onestring[c]) == "." {
-				uppercase = true
-			}
+		} else if string(onestring[c]) != "_" && string(onestring[c]) != "." {
+
 			result += string(onestring[c])
+		} else {
+			uppercase = true
 		}
+
 	}
 
 	return result
@@ -833,14 +859,22 @@ func GetArgsFields(c int, l int) []string {
 	var s string
 	var count = 0
 	ok := false
+	endline := false
 
 	for ok == false {
 		for w := range rawcode[c][l+count] {
 			s += " " + rawcode[c][l+count][w]
+			if  len(rawcode[c][l+count]) == w{
 
+				endline = true
+			}
+
+			println()
 		}
-		if string(s[len(s)-1]) != ")" {
+		if string(s[len(s)-1]) != ")" && endline == true{
 			count += 1
+			endline = false
+			println("coucou")
 		} else {
 			ok = true
 		}

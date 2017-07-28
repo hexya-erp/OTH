@@ -34,13 +34,13 @@ func init() {
 			//country_group_ids = fields.Many2many('res.country.group', 'res_country_group_pricelist_rel',
 			//'pricelist_id', 'res_country_group_id', string='Country Groups')
 		})
-	pool.Pricelist().AddCharField("Name", models.StringFieldParams{String: "Name", Required: true, Translate: true})
+	pool.Pricelist().AddCharField("Name", models.StringFieldParams{String: "Pricelist Name", Required: true, Translate: true})
 	pool.Pricelist().AddBooleanField("Active", models.SimpleFieldParams{String: "Active", Default: func(models.Environment, models.FieldMap) interface{} { return true }, Help: "If unchecked, it will allow you to hide the pricelist without removing it."})
-	pool.Pricelist().AddOne2ManyField("ItemIds", models.ReverseFieldParams{String: "product.pricelist.item", NoCopy: false, Default: func(models.Environment, models.FieldMap) interface{} { return _get_default_item_ids }})
-	pool.Pricelist().AddMany2OneField("CurrencyId", models.ForeignKeyFieldParams{String: "Currency", RelationModel: pool.Res.Currency(), Default: func(models.Environment, models.FieldMap) interface{} { return _get_default_currency_id }, Required: true})
-	pool.Pricelist().AddMany2OneField("CompanyId", models.ForeignKeyFieldParams{String: "Company')", RelationModel: pool.Res.Company()})
+	pool.Pricelist().AddOne2ManyField("ItemIds", models.ReverseFieldParams{String: "Pricelist Items", RelationModel: pool.ProductPricelistItem, ReverseFK: "PricelistId", NoCopy: false, Default: pool.Pricelist.GetDefaultItemIds()})
+	pool.Pricelist().AddMany2OneField("CurrencyId", models.ForeignKeyFieldParams{String: "Currency", RelationModel: pool.ResCurrency(), Default: pool.Pricelist.GetDefaultCurrencyId(), Required: true})
+	pool.Pricelist().AddMany2OneField("CompanyId", models.ForeignKeyFieldParams{String: "Company')", RelationModel: pool.ResCompany()})
 	pool.Pricelist().AddIntegerField("Sequence", models.SimpleFieldParams{String: "Sequence", Default: func(models.Environment, models.FieldMap) interface{} { return 16 }})
-	pool.Pricelist().AddMany2ManyField("CountryGroupIds", models.Many2ManyFieldParams{String: "Country Groups", RelationModel: pool.Res.Country.Group()})
+	pool.Pricelist().AddMany2ManyField("CountryGroupIds", models.Many2ManyFieldParams{String: "Country Groups", RelationModel: pool.ResCountryGroup()})
 	pool.Pricelist().Method().NameGet().DeclareMethod(
 		`NameGet`,
 		func() { //def name_get(self):
@@ -318,46 +318,45 @@ func init() {
 		})
 
 	pool.ResCountryGroup().DeclareModel()
-	pool.ResCountryGroup().AddMany2ManyField("PricelistIds", models.Many2ManyFieldParams{String: "Pricelists", RelationModel: pool.Product.Pricelist()})
+	pool.ResCountryGroup().AddMany2ManyField("PricelistIds", models.Many2ManyFieldParams{String: "Pricelists", RelationModel: pool.ProductPricelist()})
 
 	pool.PricelistItem().DeclareModel()
-	pool.PricelistItem().AddMany2OneField("ProductTmplId", models.ForeignKeyFieldParams{String: "Product Template", RelationModel: pool.Product.Template(), OnDelete: models.Cascade, Help: "Specify a template if this rule only applies to one product template. Keep empty otherwise."})
-	pool.PricelistItem().AddMany2OneField("ProductId", models.ForeignKeyFieldParams{String: "Product", RelationModel: pool.Product.Product(), OnDelete: models.Cascade, Help: "Specify a product if this rule only applies to one product. Keep empty otherwise."})
-	pool.PricelistItem().AddMany2OneField("CategId", models.ForeignKeyFieldParams{String: "Product Category", RelationModel: pool.Product.Category(), OnDelete: models.Cascade, Help: "Specify a product category if this rule only applies to products belonging to this category or its children categories. Keep empty otherwise."})
+	pool.PricelistItem().AddMany2OneField("ProductTmplId", models.ForeignKeyFieldParams{String: "Product Template", RelationModel: pool.ProductTemplate(), OnDelete: models.Cascade, Help: "Specify a template if this rule only applies to one product template. Keep empty otherwise."})
+	pool.PricelistItem().AddMany2OneField("ProductId", models.ForeignKeyFieldParams{String: "Product", RelationModel: pool.ProductProduct(), OnDelete: models.Cascade, Help: "Specify a product if this rule only applies to one product. Keep empty otherwise."})
+	pool.PricelistItem().AddMany2OneField("CategId", models.ForeignKeyFieldParams{String: "Product Category", RelationModel: pool.ProductCategory(), OnDelete: models.Cascade, Help: "Specify a product category if this rule only applies to products belonging to this category or its children categories. Keep empty otherwise."})
 	pool.PricelistItem().AddIntegerField("MinQuantity", models.SimpleFieldParams{String: "Min. Quantity", Default: func(models.Environment, models.FieldMap) interface{} { return 1 }, Help: "For the rule to apply, bought/sold quantity must be greater  than or equal to the minimum quantity specified in this field.\n Expressed in the default unit of measure of the product."})
-	pool.PricelistItem().AddSelectionField("AppliedOn", models.SelectionFieldParams{String: "AppliedOn", Selection: types.Selection{
-		"3_global":           "3Global",
-		"2_product_category": "2ProductCategory",
-		"1_product":          "1Product",
-		"0_product_variant":  "0ProductVariant",
+	pool.PricelistItem().AddSelectionField("AppliedOn", models.SelectionFieldParams{String: "Apply On", Selection: types.Selection{
+		"3_global":           "Global",
+		"2_product_category": "Product Category",
+		"1_product":          "Product",
+		"0_product_variant":  "Product Variant",
 	}, Default: func(models.Environment, models.FieldMap) interface{} { return "3_global" }, Required: true, Help: "Pricelist Item applicable on selected option"})
 	pool.PricelistItem().AddIntegerField("Sequence", models.SimpleFieldParams{String: "Sequence", Default: func(models.Environment, models.FieldMap) interface{} { return 5 }, Required: true, Help: "Gives the order in which the pricelist items will be checked. The evaluation gives highest priority to lowest sequence and stops as soon as a matching item is found."})
-	pool.PricelistItem().AddSelectionField("Base", models.SelectionFieldParams{String: "Base", Selection: types.Selection{
-		"list_price":     "ListPrice",
-		"standard_price": "StandardPrice",
-		"pricelist":      "Pricelist",
+	pool.PricelistItem().AddSelectionField("Base", models.SelectionFieldParams{String: "Based on", Selection: types.Selection{
+		"list_price":     "Public Price",
+		"standard_price": "Cost",
+		"pricelist":      "Other Pricelist",
 	}, Default: func(models.Environment, models.FieldMap) interface{} { return "list_price" }, Required: true, Help: "Base price for computation.\n' 'Public Price: The base price will be the Sale/public Price.\n' 'Cost Price : The base price will be the cost price.\n' 'Other Pricelist : Computation of the base price based on another Pricelist."})
-	pool.PricelistItem().AddMany2OneField("BasePricelistId", models.ForeignKeyFieldParams{String: "Other Pricelist')", RelationModel: pool.Product.Pricelist()})
-	pool.PricelistItem().AddMany2OneField("PricelistId", models.ForeignKeyFieldParams{String: "Pricelist", RelationModel: pool.Product.Pricelist(), Index: true, OnDelete: models.Cascade})
+	pool.PricelistItem().AddMany2OneField("BasePricelistId", models.ForeignKeyFieldParams{String: "Other Pricelist')", RelationModel: pool.ProductPricelist()})
+	pool.PricelistItem().AddMany2OneField("PricelistId", models.ForeignKeyFieldParams{String: "Pricelist", RelationModel: pool.ProductPricelist(), Index: true, OnDelete: models.Cascade})
 	pool.PricelistItem().AddFloatField("PriceSurcharge", models.FloatFieldParams{String: "Price Surcharge"})
-	pool.PricelistItem().AddFloatField("PriceDiscount", models.FloatFieldParams{String: "PriceDiscount", Default: func(models.Environment, models.FieldMap) interface{} { return 0 }})
+	pool.PricelistItem().AddFloatField("PriceDiscount", models.FloatFieldParams{String: "Price Discount", Default: func(models.Environment, models.FieldMap) interface{} { return 0 }})
 	pool.PricelistItem().AddFloatField("PriceRound", models.FloatFieldParams{String: "Price Rounding"})
 	pool.PricelistItem().AddFloatField("PriceMinMargin", models.FloatFieldParams{String: "Min. Price Margin"})
 	pool.PricelistItem().AddFloatField("PriceMaxMargin", models.FloatFieldParams{String: "Max. Price Margin"})
-	pool.PricelistItem().AddMany2OneField("CompanyId", models.ForeignKeyFieldParams{String: "Company", RelationModel: pool.Res.Company(), Related: "PricelistId.CompanyId", Stored: true})
+	pool.PricelistItem().AddMany2OneField("CompanyId", models.ForeignKeyFieldParams{String: "Company", RelationModel: pool.ResCompany(), Related: "PricelistIdCompanyId", Stored: true})
 	pool.PricelistItem().Fields().CompanyId().RevokeAccess(security.GroupEveryone, security.Write)
-	pool.PricelistItem().AddMany2OneField("CurrencyId", models.ForeignKeyFieldParams{String: "Currency", RelationModel: pool.Res.Currency(), Related: "PricelistId.CurrencyId", Stored: true})
+	pool.PricelistItem().AddMany2OneField("CurrencyId", models.ForeignKeyFieldParams{String: "Currency", RelationModel: pool.ResCurrency(), Related: "PricelistIdCurrencyId", Stored: true})
 	pool.PricelistItem().Fields().CurrencyId().RevokeAccess(security.GroupEveryone, security.Write)
-	pool.PricelistItem().AddDateField("DateStart", models.SimpleFieldParams{String: "DateStart", Help: "Starting date for the pricelist item validation"})
-	pool.PricelistItem().AddDateField("DateEnd", models.SimpleFieldParams{String: "DateEnd", Help: "Ending valid for the pricelist item validation"})
+	pool.PricelistItem().AddDateField("DateStart", models.SimpleFieldParams{String: "Start Date", Help: "Starting date for the pricelist item validation"})
+	pool.PricelistItem().AddDateField("DateEnd", models.SimpleFieldParams{String: "End Date", Help: "Ending valid for the pricelist item validation"})
 	pool.PricelistItem().AddSelectionField("ComputePrice", models.SelectionFieldParams{String: "ComputePrice", Selection: types.Selection{
-		"fixed":      "Fixed",
-		"percentage": "Percentage",
-		"":           "",
+		"fixed":      "Fix Price",
+		"percentage": "Percentage (discount)",
 		"formula":    "Formula",
 	}, Index: true, Default: func(models.Environment, models.FieldMap) interface{} { return "fixed" }})
-	pool.PricelistItem().AddFloatField("FixedPrice", models.FloatFieldParams{String: "FixedPrice"})
-	pool.PricelistItem().AddFloatField("PercentPrice", models.FloatFieldParams{String: "PercentPrice"})
+	pool.PricelistItem().AddFloatField("FixedPrice", models.FloatFieldParams{String: "Fixed Price"})
+	pool.PricelistItem().AddFloatField("PercentPrice", models.FloatFieldParams{String: "Percentage Price')"})
 	pool.PricelistItem().AddCharField("Name", models.StringFieldParams{String: "Name", Compute: "GetPricelistItemNamePrice", Help: "Explicit rule name for this pricelist line."})
 	pool.PricelistItem().AddCharField("Price", models.StringFieldParams{String: "Price", Compute: "GetPricelistItemNamePrice", Help: "Explicit rule name for this pricelist line."})
 	pool.PricelistItem().Method().CheckRecursion().DeclareMethod(

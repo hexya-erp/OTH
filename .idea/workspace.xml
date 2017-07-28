@@ -4,7 +4,6 @@
     <list default="true" id="24f22801-83e7-4f1f-bdb4-55a5b25e2ef9" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ResultGo/file.go" afterPath="$PROJECT_DIR$/ResultGo/file.go" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/SourcePython/file.py" afterPath="$PROJECT_DIR$/SourcePython/file.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Translate/TranslatePython.go" afterPath="$PROJECT_DIR$/Translate/TranslatePython.go" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -20,8 +19,8 @@
       <file leaf-file-name="Main.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Main.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="12" lean-forward="true" selection-start-line="0" selection-start-column="12" selection-end-line="0" selection-end-column="12" />
+            <state relative-caret-position="320">
+              <caret line="16" column="0" lean-forward="false" selection-start-line="16" selection-start-column="0" selection-end-line="16" selection-end-column="0" />
               <folding>
                 <element signature="e#14#82#0" expanded="true" />
               </folding>
@@ -32,8 +31,8 @@
       <file leaf-file-name="TranslatePython.go" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Translate/TranslatePython.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="920">
-              <caret line="724" column="65" lean-forward="true" selection-start-line="724" selection-start-column="65" selection-end-line="724" selection-end-column="65" />
+            <state relative-caret-position="6">
+              <caret line="845" column="45" lean-forward="true" selection-start-line="845" selection-start-column="45" selection-end-line="845" selection-end-column="45" />
               <folding>
                 <element signature="e#19#70#0" expanded="true" />
               </folding>
@@ -44,11 +43,21 @@
       <file leaf-file-name="file.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ResultGo/file.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-6660">
-              <caret line="51" column="44" lean-forward="true" selection-start-line="51" selection-start-column="44" selection-end-line="51" selection-end-column="44" />
+            <state relative-caret-position="120">
+              <caret line="339" column="106" lean-forward="false" selection-start-line="339" selection-start-column="106" selection-end-line="339" selection-end-column="106" />
               <folding>
                 <element signature="e#17#208#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="file.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/SourcePython/file.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="280">
+              <caret line="29" column="49" lean-forward="true" selection-start-line="29" selection-start-column="49" selection-end-line="29" selection-end-column="49" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -64,29 +73,16 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>comp</find>
-      <find>companyid</find>
-      <find>many2on</find>
-      <find>parent_id</find>
-      <find>many2many</find>
-      <find>many2one</find>
-      <find>.</find>
-      <find>one2</find>
-      <find>child_id</find>
       <find>int</find>
       <find>integer</find>
       <find>se</find>
       <find>default</find>
-      <find>println</find>
       <find>selecti</find>
       <find>help</find>
       <find>selectio</find>
       <find>sql</find>
       <find>price_min_margin</find>
-      <find>//println</find>
       <find>selec</find>
-      <find>select</find>
-      <find>selection</find>
       <find>name :=</find>
       <find>name := &quot;</find>
       <find>name = &quot;</find>
@@ -94,13 +90,26 @@
       <find>many</find>
       <find>price_disco</find>
       <find>sele</find>
+      <find>product.pricelist.item</find>
+      <find>price_dis</find>
+      <find>one2ma</find>
+      <find>&quot;default&quot;</find>
+      <find>one2</find>
+      <find>//println</find>
+      <find>selection</find>
+      <find>select</find>
+      <find>many2</find>
+      <find>float</find>
+      <find>one2many</find>
+      <find>many2o</find>
+      <find>println</find>
     </findStrings>
     <replaceStrings>
       <replace>&quot;().A</replace>
       <replace>GetArgsSqlConstraint</replace>
       <replace>if string(value[1][len(value[1])-1]) != &quot;\&quot;)&quot; {</replace>
-      <replace>//println</replace>
       <replace>println</replace>
+      <replace>//println</replace>
     </replaceStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$/Translate</dir>
@@ -117,8 +126,8 @@
         <option value="$PROJECT_DIR$/Translate/TranslateXML.go" />
         <option value="$PROJECT_DIR$/Main.go" />
         <option value="$PROJECT_DIR$/SourcePython/file.py" />
-        <option value="$PROJECT_DIR$/Translate/TranslatePython.go" />
         <option value="$PROJECT_DIR$/ResultGo/file.go" />
+        <option value="$PROJECT_DIR$/Translate/TranslatePython.go" />
       </list>
     </option>
   </component>
@@ -150,6 +159,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
@@ -207,7 +217,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -332,12 +341,12 @@
     <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.1901603" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.19237147" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32881" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32985386" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.26409185" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26304802" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32776618" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -425,7 +434,8 @@
     <MESSAGE value="21/07/2017" />
     <MESSAGE value="22/07/2017" />
     <MESSAGE value="23/07/2017" />
-    <option name="LAST_COMMIT_MESSAGE" value="23/07/2017" />
+    <MESSAGE value="27/07/2017" />
+    <option name="LAST_COMMIT_MESSAGE" value="27/07/2017" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -845,28 +855,28 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/SourcePython/file.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="215">
-          <caret line="377" column="15" lean-forward="false" selection-start-line="377" selection-start-column="4" selection-end-line="377" selection-end-column="15" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ResultGo/file.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-6660">
-          <caret line="51" column="44" lean-forward="true" selection-start-line="51" selection-start-column="44" selection-end-line="51" selection-end-column="44" />
+        <state relative-caret-position="120">
+          <caret line="339" column="106" lean-forward="false" selection-start-line="339" selection-start-column="106" selection-end-line="339" selection-end-column="106" />
           <folding>
             <element signature="e#17#208#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/SourcePython/file.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="280">
+          <caret line="29" column="49" lean-forward="true" selection-start-line="29" selection-start-column="49" selection-end-line="29" selection-end-column="49" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Main.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="12" lean-forward="true" selection-start-line="0" selection-start-column="12" selection-end-line="0" selection-end-column="12" />
+        <state relative-caret-position="320">
+          <caret line="16" column="0" lean-forward="false" selection-start-line="16" selection-start-column="0" selection-end-line="16" selection-end-column="0" />
           <folding>
             <element signature="e#14#82#0" expanded="true" />
           </folding>
@@ -875,8 +885,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Translate/TranslatePython.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="920">
-          <caret line="724" column="65" lean-forward="true" selection-start-line="724" selection-start-column="65" selection-end-line="724" selection-end-column="65" />
+        <state relative-caret-position="6">
+          <caret line="845" column="45" lean-forward="true" selection-start-line="845" selection-start-column="45" selection-end-line="845" selection-end-column="45" />
           <folding>
             <element signature="e#19#70#0" expanded="true" />
           </folding>
