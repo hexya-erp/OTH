@@ -11,12 +11,14 @@ var packagename string
 var packagenameset bool = false
 var rawcode [][][]string
 var imports string
+var defs []string
 
 func TransPyToGo(str string) string {
 
 	var content string
 
 	GenerateSlices(str)
+	GenerateDefs(str)
 	content = TransRules()
 
 	var result string = "package " + packagename + " \n\n  import (\n" + imports + "\n) \n\n func init() { \n\n " + content + " \n }"
@@ -64,6 +66,28 @@ func GenerateSlices(str string) {
 			rawcode = append(rawcode, class[c])
 		}
 
+	}
+
+}
+
+func GenerateDefs(str string) {
+
+	cut := strings.Split(str,"@api.")
+
+	for c := range cut{
+		cut[c] = "@api."+cut[c]
+		def := strings.Split(cut[c] , "def ")
+
+		for d:= range def{
+
+			defs = append(defs , def[d])
+		}
+	}
+
+	for d:= range defs {
+
+		println(defs[d])
+		println("______________________________________________________________________________________________________")
 	}
 
 }
@@ -144,6 +168,7 @@ func TransRules() string {
 									cut := help[i+1]
 									cut = regex.ReplaceAllString(cut, "")
 									body += " ,Help :\"" + cut + "\""
+									body += " ,Help :\"" + cut + "\""
 								}
 							}
 						case "index":
@@ -193,7 +218,7 @@ func TransRules() string {
 							body += ", Required: " + strings.ToLower(value[1])
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
@@ -274,7 +299,7 @@ func TransRules() string {
 							}
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
@@ -337,7 +362,7 @@ func TransRules() string {
 						case "help":
 							body += ", Help : \"" + TrimString(value[1]) + "\""
 						case "default":
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
+							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
 						case "required":
 							body += ", Required: " + strings.ToLower(value[1])
 						case "index":
@@ -389,7 +414,7 @@ func TransRules() string {
 							}
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
@@ -437,7 +462,7 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_"))+"()"
+								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
@@ -753,7 +778,7 @@ func TransRules() string {
 					}
 					args := strings.Split(thisline, ",")
 
-					if len(args) > 3 {
+					if len(args) > 3 && args[3] != " " {
 						i := 2
 						var sqlstring = CamelCase(args[1])
 						for string(sqlstring[len(sqlstring)-2]) != ")" {
@@ -767,6 +792,7 @@ func TransRules() string {
 					name := GetArgsSqlConstraint(args[0])
 					sql := GetArgsSqlConstraint(args[1])
 					errorstring := GetArgsSqlConstraint(args[2])
+
 					result += "pool." + classname + "().AddSQLConstraint(" + name + " , " + sql + " , " + errorstring + ")\n"
 
 					count += 1
@@ -774,32 +800,27 @@ func TransRules() string {
 
 			} else if rawcode[class][line][0] == "def" {
 
-				var body string
 
-				var i int = 1
-				for ok := true; ok; ok = rawcode[class][line+i][0] != "def" {
+			//	var body string
+			//
+			//	for d := range methodespy {
+			//
+			//		cut := strings.Split(rawcode[class][line][1], "(")
+			//
+			//		println(rawcode[class][line][1],methodespy[d][0][0])
+			//		if rawcode[class][line][1] == methodespy[d][0][0] {
+			//
+			//			println(classname)
+			//			name := CamelCase(strings.Trim(cut[0], "_"))
+			//			body += methodespy[d][1][0]
+			//			result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
+			//				"\n`" + name + "` ," +
+			//				"\nfunc (){" +
+			//				body + "})\n"
+			//		}
+			//
+			//	}
 
-					body += "//"
-					for w := range rawcode[class][line+i-1] {
-
-						body += rawcode[class][line+i-1][w]
-						body += " "
-					}
-					body += "\n"
-					i++
-
-					if line+i == len(rawcode[class]) {
-						break
-					}
-				}
-
-				cut := strings.Split(rawcode[class][line][1], "(")
-				name := CamelCase(strings.Trim(cut[0], "_"))
-
-				result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
-					"\n`" + name + "` ," +
-					"\nfunc (){" +
-					body + "})\n"
 			}
 
 		}
@@ -863,7 +884,7 @@ func GetArgsFields(c int, l int) []string {
 		for w := range rawcode[c][l+count] {
 			s += " " + rawcode[c][l+count][w]
 		}
-		if string(s[len(s)-1]) != ")"{
+		if string(s[len(s)-1]) != ")" {
 			count += 1
 		} else {
 			ok = true
