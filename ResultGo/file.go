@@ -1,12 +1,13 @@
 package product
 
 import (
-	"github.com/hexya-erp/hexya/hexya/models/security"
 	"github.com/hexya-erp/hexya/hexya/models/types"
 
 	"github.com/hexya-erp/hexya/pool"
 
 	"github.com/hexya-erp/hexya/hexya/models"
+
+	"github.com/hexya-erp/hexya/hexya/models/security"
 )
 
 func init() {

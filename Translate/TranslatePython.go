@@ -251,7 +251,6 @@ func TransRules() string {
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
-					println(args[0])
 					args[2] = strings.TrimSpace(args[2])
 					if string(args[2][0]) == "'" || string(args[2][0]) == "\"" {
 						name = "\"" + TrimString(args[2]) + "\""
@@ -859,22 +858,13 @@ func GetArgsFields(c int, l int) []string {
 	var s string
 	var count = 0
 	ok := false
-	endline := false
 
 	for ok == false {
 		for w := range rawcode[c][l+count] {
 			s += " " + rawcode[c][l+count][w]
-			if  len(rawcode[c][l+count]) == w{
-
-				endline = true
-			}
-
-			println()
 		}
-		if string(s[len(s)-1]) != ")" && endline == true{
+		if string(s[len(s)-1]) != ")"{
 			count += 1
-			endline = false
-			println("coucou")
 		} else {
 			ok = true
 		}
