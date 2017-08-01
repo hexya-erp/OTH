@@ -72,22 +72,16 @@ func GenerateSlices(str string) {
 
 func GenerateDefs(str string) {
 
-	cut := strings.Split(str,"@api.")
+	cut := strings.Split(str, "@api.")
 
-	for c := range cut{
-		cut[c] = "@api."+cut[c]
-		def := strings.Split(cut[c] , "def ")
+	for c := range cut {
+		cut[c] = "@api." + cut[c]
+		def := strings.Split(cut[c], "def ")
 
-		for d:= range def{
+		for d := range def {
 
-			defs = append(defs , def[d])
+			defs = append(defs, def[d])
 		}
-	}
-
-	for d:= range defs {
-
-		println(defs[d])
-		println("______________________________________________________________________________________________________")
 	}
 
 }
@@ -96,6 +90,7 @@ func GenerateDefs(str string) {
 func TransRules() string {
 
 	var result string
+	var countdef int = 1
 	var selectionimportset bool = false
 	for class := range rawcode {
 		getclassname := strings.Split(rawcode[class][0][0], "(")
@@ -800,32 +795,39 @@ func TransRules() string {
 
 			} else if rawcode[class][line][0] == "def" {
 
+				var body string
+				var args string
 
-			//	var body string
-			//
-			//	for d := range methodespy {
-			//
-			//		cut := strings.Split(rawcode[class][line][1], "(")
-			//
-			//		println(rawcode[class][line][1],methodespy[d][0][0])
-			//		if rawcode[class][line][1] == methodespy[d][0][0] {
-			//
-			//			println(classname)
-			//			name := CamelCase(strings.Trim(cut[0], "_"))
-			//			body += methodespy[d][1][0]
-			//			result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
-			//				"\n`" + name + "` ," +
-			//				"\nfunc (){" +
-			//				body + "})\n"
-			//		}
-			//
-			//	}
+				cut := strings.Split(rawcode[class][line][1], "(")
+				name := CamelCase(strings.Trim(cut[0], "_"))
+				getargs := GetArgsFunc(defs[countdef])
 
+				if string(defs[countdef][:5]) == "@api." {
+
+					body += "/*"+defs[countdef] +  defs[countdef+1]+"*/"
+					countdef += 2
+				} else {
+					body += "/*"+defs[countdef]+"*/"
+					countdef += 1
+				}
+
+				for g:= range getargs{
+					if getargs[g] != "self"{
+						args += " ,"+TrimString(getargs[g])
+					}
+
+				}
+
+				result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
+					"\n`" + name + "` ," +
+					"\nfunc (rs pool."+classname+"Set"+args+"){\n" +
+					body + "})\n"
 			}
 
 		}
 
 	}
+
 	return result
 }
 
@@ -896,6 +898,19 @@ func GetArgsFields(c int, l int) []string {
 	result = strings.Split(cut[1], ",")
 
 	return result
+}
+
+func GetArgsFunc(s string) []string{
+	var args []string
+
+	cut := strings.Split(s , ")")
+	cut1 := strings.Split(cut[0] , "(")
+	if len(cut1) > 1{
+		args = strings.Split(cut1[1] , ",")
+	}
+
+
+	return args
 }
 
 func GetHelpText(c int, l int) []string {
