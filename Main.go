@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"github.com/hexya-erp/OTH/Translate"
+	"github.com/beevik/etree"
 )
 
 func main() {
@@ -13,11 +14,27 @@ func main() {
 		fmt.Print(errr)
 	}
 
-	str := string(read)
-	str = Translate.TransPyToGo(str)
+	gocode := string(read)
+	gocode = Translate.TransPyToGo(gocode)
 
-	errw := ioutil.WriteFile("ResultGo/file.go", []byte(str), 0644)
+	errw := ioutil.WriteFile("ResultGo/file.go", []byte(gocode), 0644)
 	if errw != nil {
 		fmt.Print(errw)
 	}
+
+
+
+	doc := etree.NewDocument()
+	if err := doc.ReadFromFile("SourceXML/file.xml");err != nil{
+		fmt.Print(err)
+	}
+
+	 xml := Translate.TransXML(doc)
+
+	errxml := ioutil.WriteFile("ResultXML/file.xml", []byte(xml), 0644)
+	if errxml != nil {
+		fmt.Print(errxml)
+	}
+
+
 }

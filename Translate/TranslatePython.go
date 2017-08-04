@@ -79,8 +79,11 @@ func GenerateDefs(str string) {
 		def := strings.Split(cut[c], "def ")
 
 		for d := range def {
+			finaldef := strings.Split(def[d], "class")
+			for f := range finaldef {
 
-			defs = append(defs, def[d])
+				defs = append(defs, finaldef[f])
+			}
 		}
 	}
 
@@ -90,7 +93,6 @@ func GenerateDefs(str string) {
 func TransRules() string {
 
 	var result string
-	var countdef int = 1
 	var selectionimportset bool = false
 	for class := range rawcode {
 		getclassname := strings.Split(rawcode[class][0][0], "(")
@@ -331,7 +333,7 @@ func TransRules() string {
 					cut := strings.Split(s, "[")
 					cut2 := strings.Split(cut[1], "]")
 					args := strings.Split(cut2[1], ",")
-					selectable := strings.Split(cut2[0], "'")
+					selectable := strings.Split(cut2[0], "),")
 
 					name := ""
 					args[1] = strings.TrimSpace(args[1])
@@ -342,13 +344,26 @@ func TransRules() string {
 					}
 					body += "String :" + name
 
-					body += ", Selection : types.Selection{"
-					var i = 1
-					for i < len(selectable)-3 {
-						body += "\n \"" + strings.TrimSpace(selectable[i]) + "\" : \"" + strings.TrimSpace(selectable[i+2]) + "\","
-						i += 4
+					body += ", Selection : types.Selection{\n"
+
+					for s := range selectable {
+						sec := strings.Split(selectable[s], ",")
+						if len(sec) > 2 {
+							i := 1
+							for len(sec)-2 >= i {
+								sec[1] += sec[1+i]
+
+								i++
+							}
+							sec = sec[:len(sec)-(len(sec)-2)]
+						}
+						sec0 := TrimString(strings.Trim(strings.TrimSpace(sec[0]), "("))
+						sec1 := TrimString(strings.Trim(strings.TrimSpace(sec[1]), ")"))
+						body += "\"" + sec0 + "\" : \"" + sec1 + "\",\n"
+
 					}
-					body += "\n}"
+
+					body += "}"
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -542,6 +557,7 @@ func TransRules() string {
 
 				case "Many2many":
 					var body string
+					var readonly string
 					args := GetArgsFields(class, line)
 					name := ""
 					args[1] = strings.TrimSpace(args[1])
@@ -564,12 +580,15 @@ func TransRules() string {
 							body += ", OnDelete : models." + CamelCase(TrimString(value[1]))
 						case "compute":
 							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+						case "readonly":
+							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
 						default:
 							//println("Many2Many: " + value[0])
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
 					result += "pool." + classname + "().AddMany2ManyField(" + fieldname + ", models.Many2ManyFieldParams{" + body + "})\n"
+					result += readonly
 
 				case "Binary":
 					var body string
@@ -710,12 +729,29 @@ func TransRules() string {
 						value := strings.Split(arg, "=")
 
 						switch strings.TrimSpace(value[0]) {
+						case "translate":
+							body += ", Translate: " + strings.ToLower(value[1])
+						case "help":
+							help := GetHelpText(class, line)
+
+							for i := range help {
+								if help[i][len(help[i])-4:] == "help" {
+
+									regex, err := regexp.Compile("\"")
+									if err != nil {
+										return err.Error()
+									}
+									cut := help[i+1]
+									cut = regex.ReplaceAllString(cut, "")
+									body += " ,Help :\"" + cut + "\""
+								}
+							}
 						default:
 							//println("Text: " + value[0])
 						}
 					}
 
-					result += "pool." + classname + "().AddTextField(" + fieldname + " , models.StringFieldParams{})\n"
+					result += "pool." + classname + "().AddTextField(" + fieldname + " , models.StringFieldParams{" + body + "})\n"
 
 				case "Html":
 					var body string
@@ -797,30 +833,48 @@ func TransRules() string {
 
 				var body string
 				var args string
+				var getargs []string
+				var def string
+
+				for d := range defs {
+					if len(defs[d]) >= len(rawcode[class][line][1]) && rawcode[class][line][1] == defs[d][:len(rawcode[class][line][1])] {
+						def = defs[d]
+						break
+					}
+				}
 
 				cut := strings.Split(rawcode[class][line][1], "(")
 				name := CamelCase(strings.Trim(cut[0], "_"))
-				getargs := GetArgsFunc(defs[countdef])
+				getargs = GetArgsFunc(def)
 
-				if string(defs[countdef][:5]) == "@api." {
+				if len(rawcode[class][line-1][0]) > 5 && string(rawcode[class][line-1][0][:5]) == "@api." {
+					body += "  //"
+					for w := range rawcode[class][line-1] {
 
-					body += "/*"+defs[countdef] +  defs[countdef+1]+"*/"
-					countdef += 2
-				} else {
-					body += "/*"+defs[countdef]+"*/"
-					countdef += 1
-				}
-
-				for g:= range getargs{
-					if getargs[g] != "self"{
-						args += " ,"+TrimString(getargs[g])
+						body += rawcode[class][line-1][w]
 					}
-
+					body += "\n"
 				}
 
-				result += "pool." + classname + "().Method()." + name + "().DeclareMethod(" +
+				body += "  /*def " + def + "*/"
+
+				if len(getargs) > 1 {
+					args = " , args struct{"
+					for g := range getargs {
+						if len(getargs[g]) > 4 {
+							if getargs[g][:4] != "Self" {
+								s := strings.Split(getargs[g], "=")
+								args += TrimString(s[0]) + " interface{}\n"
+							}
+						}
+
+					}
+					args += "}"
+				}
+
+				result += "pool." + classname + "().Methods()." + name + "().DeclareMethod(" +
 					"\n`" + name + "` ," +
-					"\nfunc (rs pool."+classname+"Set"+args+"){\n" +
+					"\nfunc (rs pool." + classname + "Set" + args + "){\n" +
 					body + "})\n"
 			}
 
@@ -900,15 +954,20 @@ func GetArgsFields(c int, l int) []string {
 	return result
 }
 
-func GetArgsFunc(s string) []string{
+func GetArgsFunc(s string) []string {
 	var args []string
 
-	cut := strings.Split(s , ")")
-	cut1 := strings.Split(cut[0] , "(")
-	if len(cut1) > 1{
-		args = strings.Split(cut1[1] , ",")
+	cut := strings.Split(s, ")")
+	cut1 := strings.Split(cut[0], "(")
+	if len(cut1) > 1 {
+		args = strings.Split(cut1[1], ",")
 	}
 
+	for a := range args {
+
+		args[a] = CamelCase(TrimString(strings.TrimSpace(args[a])))
+		args[a] = args[a]
+	}
 
 	return args
 }
