@@ -1,31 +1,120 @@
 package Translate
 
-import "github.com/beevik/etree"
+import (
+	"github.com/beevik/etree"
+)
 
-func TransXML(doc *etree.Document) string {
+func TransXML(sourcedoc *etree.Document) {
 
-	var result string
+	doc := etree.NewDocument()
+	hexya := doc.CreateElement("hexya")
+	data := hexya.CreateElement("data")
 
-	root := doc.SelectElement("odoo")
+	recs := sourcedoc.FindElements("odoo/data/record")
 
-	println("Root element: " + root.Tag)
+	for _, rec := range recs {
 
-	for _, data := range root.SelectElements("data") {
-		println("Child element: " + data.Tag)
+		recType := rec.SelectAttrValue("model", "")
 
-		for _, record := range data.SelectElements("record") {
-			println("\nChild element2: " + record.Tag)
-			println("____________________________________________")
+		switch recType {
 
-			for _, field := range record.SelectElements("field") {
+		case "ir.ui.view":
 
-				for _ , s := range field.Attr{
+			view := data.CreateElement("view")
 
-					println(s.Value)
+			view.CreateAttr("id", rec.SelectAttr("id").Value)
+
+			fields := rec.FindElements("field")
+
+			for _, fi := range fields {
+
+				if fi.SelectAttr("name").Value == "model" {
+
+					view.CreateAttr("model", CamelCase(fi.Text()))
+
+				} else if fi.SelectAttr("name").Value == "arch" {
+
+					for _, child := range fi.ChildElements() {
+
+						view.AddChild(child)
+					}
+				}
+
+			}
+
+		case "ir.actions.act_window":
+
+			action := data.CreateElement("action")
+
+			action.CreateAttr("id", rec.SelectAttr("id").Value)
+			action.CreateAttr("type", "ir.actions.act_window")
+
+			fields := rec.FindElements("field")
+
+			for _, fi := range fields {
+
+				switch fi.SelectAttr("name").Value {
+
+				case "res_model":
+					action.CreateAttr("model", CamelCase(fi.Text()))
+
+				case "name":
+					action.CreateAttr("name", CamelCase(fi.Text()))
+
+				case "view_mode":
+					action.CreateAttr("view_mode", fi.Text())
+
+				case "search_view_id":
+					action.CreateAttr("search_view_id", fi.SelectAttr("ref").Value)
+
+				case "help":
+					help := action.CreateElement("help")
+					for _, markup := range fi.ChildElements() {
+						help.AddChild(markup)
+					}
+
+				case "view_id":
+					action.CreateAttr("view_id", fi.SelectAttr("ref").Value)
+				}
+
+			}
+
+		case "ir.actions.act_window.view":
+
+			var id string
+			var mode string
+			var action string
+
+			fields := rec.FindElements("field")
+
+			for _, fi := range fields {
+
+				switch fi.SelectAttr("name").Value {
+
+				case "view_mode":
+					mode = fi.Text()
+				case "view_id":
+					id = fi.SelectAttr("ref").Value
+				case "act_window_id":
+					action = fi.SelectAttr("ref").Value
+				}
+
+			}
+
+			for _,d := range data.ChildElements(){
+
+				if d.SelectAttr("id").Value == action{
+
+					v := d.CreateElement("view")
+					v.CreateAttr("id",id)
+					v.CreateAttr("type",mode)
 				}
 			}
-		}
-	}
 
-	return result
+		}
+
+	}
+	
+	doc.Indent(4)
+	doc.WriteToFile("ResultXML/file.xml")
 }

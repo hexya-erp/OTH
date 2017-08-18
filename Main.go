@@ -29,12 +29,12 @@ func main() {
 		fmt.Print(err)
 	}
 
-	 xml := Translate.TransXML(doc)
+	 Translate.TransXML(doc)
 
-	errxml := ioutil.WriteFile("ResultXML/file.xml", []byte(xml), 0644)
-	if errxml != nil {
-		fmt.Print(errxml)
-	}
+	//errxml := ioutil.WriteFile("ResultXML/file.xml", []byte(xml), 0644)
+	//if errxml != nil {
+	//	fmt.Print(errxml)
+	//}
 
 
 }
