@@ -17,6 +17,12 @@ func TransPyToGo(str string) string {
 
 	var content string
 
+	packagename = ""
+	packagenameset = false
+	rawcode = nil
+	imports = ""
+	defs = nil
+
 	GenerateSlices(str)
 	GenerateDefs(str)
 	content = TransRules()
@@ -280,7 +286,7 @@ func TransRules() string {
 						name = fieldname
 					}
 					body += "String :" + name
-					body += " ,RelationModel : pool." + CamelCase(TrimString(strings.TrimSpace(args[0])))
+					body += " ,RelationModel : pool." + CamelCase(TrimString(strings.TrimSpace(args[0]))) + "()"
 					body += " ,ReverseFK : \"" + CamelCase(TrimString(strings.TrimSpace(args[1]))) + "\""
 
 					for i := range args {

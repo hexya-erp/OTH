@@ -4,13 +4,19 @@ import (
 	"github.com/beevik/etree"
 )
 
-func TransXML(sourcedoc *etree.Document) {
+func TransXML(sourcedoc *etree.Document, docname string) {
 
 	doc := etree.NewDocument()
 	hexya := doc.CreateElement("hexya")
 	data := hexya.CreateElement("data")
 
-	recs := sourcedoc.FindElements("odoo/data/record")
+	var recs []*etree.Element
+
+	if sourcedoc.SelectElement("odoo").SelectElement("data") != nil {
+		recs = sourcedoc.FindElements("odoo/data/record")
+	} else {
+		recs = sourcedoc.FindElements("odoo/record")
+	}
 
 	for _, rec := range recs {
 
@@ -74,7 +80,12 @@ func TransXML(sourcedoc *etree.Document) {
 					}
 
 				case "view_id":
-					action.CreateAttr("view_id", fi.SelectAttr("ref").Value)
+					if fi.SelectAttr("ref") != nil {
+						action.CreateAttr("view_id", fi.SelectAttr("ref").Value)
+					} else {
+						action.CreateAttr("view_id", "")
+					}
+
 				}
 
 			}
@@ -101,20 +112,20 @@ func TransXML(sourcedoc *etree.Document) {
 
 			}
 
-			for _,d := range data.ChildElements(){
+			for _, d := range data.ChildElements() {
 
-				if d.SelectAttr("id").Value == action{
+				if d.SelectAttr("id").Value == action {
 
 					v := d.CreateElement("view")
-					v.CreateAttr("id",id)
-					v.CreateAttr("type",mode)
+					v.CreateAttr("id", id)
+					v.CreateAttr("type", mode)
 				}
 			}
 
 		}
 
 	}
-	
+
 	doc.Indent(4)
-	doc.WriteToFile("ResultXML/file.xml")
+	doc.WriteToFile("ResultXML/" + docname)
 }
