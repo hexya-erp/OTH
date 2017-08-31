@@ -1,24 +1,21 @@
-package Translate
+package translate
 
 import (
-	"bytes"
 	"regexp"
 	"strings"
 	"unicode"
 )
 
 var packagename string
-var packagenameset bool = false
 var rawcode [][][]string
 var imports string
 var defs []string
 
-func TransPyToGo(str string) string {
+func TransPyToGo(str string, pack string) string {
 
 	var content string
 
-	packagename = ""
-	packagenameset = false
+	packagename = pack
 	rawcode = nil
 	imports = ""
 	defs = nil
@@ -85,14 +82,14 @@ func GenerateDefs(str string) {
 		def := strings.Split(cut[c], "def ")
 
 		for d := range def {
-			finaldef := strings.Split(def[d], "class")
-			for f := range finaldef {
-
-				defs = append(defs, finaldef[f])
+			defcut := strings.Split(def[d], "class")
+			for f := range defcut {
+				finalcut := strings.Split(defcut[f], "fields.")
+				defs = append(defs, finalcut[0])
 			}
+
 		}
 	}
-
 }
 
 // return a string in go code corresponding to the original python code
@@ -100,37 +97,38 @@ func TransRules() string {
 
 	var result string
 	var selectionimportset bool = false
+	var classname string
+
 	for class := range rawcode {
-		getclassname := strings.Split(rawcode[class][0][0], "(")
-		classname := getclassname[0]
-		result += "\n\npool." + classname + "().DeclareModel()\n"
+		for line := range rawcode[class] {
+
+			if rawcode[class][line][0] == "_inherit" {
+				classname = CheckBuitInNames(CamelCase(TrimString(string(rawcode[class][line][2]))))
+				break
+			} else if rawcode[class][line][0] == "_name" {
+				classname = CheckBuitInNames(CamelCase(TrimString(string(rawcode[class][line][2]))))
+				break
+				result += "\n\npool." + classname + "().DeclareModel()\n"
+			}
+		}
 
 		for line := range rawcode[class] {
 
-			if packagenameset == false && rawcode[class][line][0] == "_name" {
+			typemodel := strings.Split(rawcode[class][line][0], ".")
 
-				var buffer bytes.Buffer
+			if len(typemodel) > 1 && typemodel[1] == "TransientModel):" {
+				result += "\n\npool." + classname + "().DeclareTransientModel()\n"
 
-				for c := range rawcode[class][line][2] {
-
-					if string(rawcode[class][line][2][c]) == "." {
-						break
-					} else {
-						//dont write first character that is always " or '
-						if c != 0 {
-							buffer.WriteByte(rawcode[class][line][2][c])
-						}
-					}
-				}
-				packagename = buffer.String()
-				packagenameset = true
+			} else if len(typemodel) > 1 && typemodel[1] == "Model):" {
+				result += "\n\npool." + classname + "().DeclareModel()\n"
 			}
 
 			if len(rawcode[class][line]) >= 3 && len(rawcode[class][line][2]) > 7 && rawcode[class][line][2][:7] == "fields." {
 
 				cut := strings.Split(rawcode[class][line][2], "(")
 				fieldtype := cut[0][7:]
-				fieldname := CamelCase(rawcode[class][line][0])
+				odoofieldname := rawcode[class][line][0]
+				fieldname := CamelCase(odoofieldname)
 				fieldname = "\"" + fieldname + "\""
 
 				switch fieldtype {
@@ -153,11 +151,19 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 						case "required":
-							body += ", Required: " + strings.ToLower(value[1])
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
+							} else {
+								body += ", Required : " + strings.ToLower(value[1])
+							}
 						case "translate":
 							body += ", Translate: " + strings.ToLower(value[1])
 						case "compute":
-							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
 
@@ -170,7 +176,6 @@ func TransRules() string {
 									}
 									cut := help[i+1]
 									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
 									body += " ,Help :\"" + cut + "\""
 								}
 							}
@@ -206,11 +211,27 @@ func TransRules() string {
 					name := ""
 					args[1] = strings.TrimSpace(args[1])
 					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
-						name = "\"" + TrimString(args[1]) + "\""
+						name = "\"" + TrimString(strings.Trim(args[1], ")")) + "\""
 					} else {
 						name = fieldname
 					}
-					foreignkey := CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'"))
+					foreignkey := CheckBuitInNames(CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'")))
+
+					if (foreignkey[len(foreignkey)-2:]) == "Id" {
+						foreignkey = foreignkey[:len(foreignkey)-2]
+
+					} else if (foreignkey[len(foreignkey)-3:]) == "Ids" {
+						foreignkey = foreignkey[:len(foreignkey)-3] + "s\""
+					}
+
+					if TrimString(odoofieldname[len(odoofieldname)-3:]) == "_id" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-3] + "\""
+
+					} else if TrimString(odoofieldname[len(odoofieldname)-4:]) == "_ids" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-4] + "s\""
+					}
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -218,13 +239,30 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 						case "required":
-							body += ", Required: " + strings.ToLower(value[1])
-						case "default":
-							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
 							} else {
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+								body += ", Required : " + strings.ToLower(value[1])
 							}
+						case "default":
+
+							def := value[1]
+
+							for d := range defs {
+								if len(defs[d]) > len(value[1]) && defs[d][:len(value[1])] == value[1] {
+
+									def = defs[d]
+								}
+							}
+
+							body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+								"/*" + def + "*/\n" +
+								"return 0}"
+
 						case "ondelete":
 							body += ", OnDelete : models." + CamelCase(TrimString(value[1]))
 						case "help":
@@ -255,9 +293,32 @@ func TransRules() string {
 						case "readonly":
 							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
 						case "related":
-							body += ", Related: \"" + CamelCase(strings.Trim(value[1], "'")) + "\""
+							var result string
+							var i int = 0
+							related := CamelCaseForRelated(strings.Trim(value[1], "'"))
+							split := strings.Split(related, ".")
+
+							for s := range split {
+
+								if (split[s][len(split[s])-2:]) == "Id" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-2]
+
+								} else if (split[s][len(split[s])-3:]) == "Ids" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-3] + "s"
+
+								}
+
+								i++
+							}
+							body += ", Related: \"" + result + "\""
 						case "store":
-							body += ", Stored: " + strings.ToLower(value[1])
+							//TODO
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "auto_join":
@@ -279,15 +340,34 @@ func TransRules() string {
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
+					foreignkey := CamelCase(TrimString(strings.TrimSpace(args[1])))
 					args[2] = strings.TrimSpace(args[2])
 					if string(args[2][0]) == "'" || string(args[2][0]) == "\"" {
-						name = "\"" + TrimString(args[2]) + "\""
+						name = strings.Trim(strings.Trim(args[2], ")"), "(")
+						name = "\"" + TrimString(name) + "\""
 					} else {
 						name = fieldname
 					}
 					body += "String :" + name
-					body += " ,RelationModel : pool." + CamelCase(TrimString(strings.TrimSpace(args[0]))) + "()"
-					body += " ,ReverseFK : \"" + CamelCase(TrimString(strings.TrimSpace(args[1]))) + "\""
+					body += " ,RelationModel : pool." + CheckBuitInNames(CamelCase(TrimString(strings.TrimSpace(args[0])))) + "()"
+
+					if (foreignkey[len(foreignkey)-2:]) == "Id" {
+						foreignkey = foreignkey[:len(foreignkey)-2]
+
+					} else if (foreignkey[len(foreignkey)-3:]) == "Ids" {
+						foreignkey = foreignkey[:len(foreignkey)-3] + "s\""
+					}
+
+					body += " ,ReverseFK : \"" + foreignkey + "\""
+
+					if TrimString(odoofieldname[len(odoofieldname)-3:]) == "_id" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-3] + "\""
+
+					} else if TrimString(odoofieldname[len(odoofieldname)-4:]) == "_ids" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-4] + "s\""
+					}
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -302,7 +382,17 @@ func TransRules() string {
 							}
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
+								var def string
+
+								for d := range defs {
+									if len(defs[d]) > len(value[1]) && defs[d][:len(value[1])] == value[1] {
+
+										def = defs[d]
+									}
+								}
+
+								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
@@ -380,7 +470,15 @@ func TransRules() string {
 						case "default":
 							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
 						case "required":
-							body += ", Required: " + strings.ToLower(value[1])
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
+							} else {
+								body += ", Required : " + strings.ToLower(value[1])
+							}
 						case "index":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -430,12 +528,30 @@ func TransRules() string {
 							}
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
+								var def string
+
+								for d := range defs {
+									if len(defs[d]) > len(value[1]) && defs[d][:len(value[1])] == value[1] {
+
+										def = defs[d]
+									}
+								}
+
+								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
 						case "required":
-							body += ", Required: " + strings.ToLower(value[1])
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
+							} else {
+								body += ", Required : " + strings.ToLower(value[1])
+							}
 						case "index":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -447,7 +563,7 @@ func TransRules() string {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
 						case "compute":
-							body += ", Compute : pool." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
+							//body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						default:
 							//println("Integer: " + value[0])
@@ -478,14 +594,24 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "default":
 							if string(value[1][0]) == "_" {
-								body += ", Default : pool." + classname + "." + CamelCase(strings.Trim(value[1], "_")) + "()"
+								var def string
+
+								for d := range defs {
+									if len(defs[d]) > len(value[1]) && defs[d][:len(value[1])] == value[1] {
+
+										def = defs[d]
+									}
+								}
+
+								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
 						case "digits":
 							//TODO
 						case "compute":
-							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
 
@@ -502,7 +628,15 @@ func TransRules() string {
 								}
 							}
 						case "required":
-							body += ", Required: " + strings.ToLower(value[1])
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
+							} else {
+								body += ", Required : " + strings.ToLower(value[1])
+							}
 						case "company_dependent":
 							//TODO
 
@@ -573,7 +707,23 @@ func TransRules() string {
 						name = fieldname
 					}
 
-					foreignkey := CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'"))
+					foreignkey := CheckBuitInNames(CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'")))
+
+					if (foreignkey[len(foreignkey)-2:]) == "Id" {
+						foreignkey = foreignkey[:len(foreignkey)-2]
+
+					} else if (foreignkey[len(foreignkey)-3:]) == "Ids" {
+						foreignkey = foreignkey[:len(foreignkey)-3] + "s\""
+					}
+
+					if TrimString(odoofieldname[len(odoofieldname)-3:]) == "_id" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-3] + "\""
+
+					} else if TrimString(odoofieldname[len(odoofieldname)-4:]) == "_ids" {
+						body += " , JSON : \"" + odoofieldname + "\""
+						fieldname = fieldname[:len(fieldname)-4] + "s\""
+					}
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
@@ -582,10 +732,8 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
-						case "ondelete":
-							body += ", OnDelete : models." + CamelCase(TrimString(value[1]))
 						case "compute":
-							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "readonly":
 							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
 						default:
@@ -631,7 +779,7 @@ func TransRules() string {
 								}
 							}
 						case "compute":
-							body += ", Compute: \"" + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "\""
+							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "inverse":
 							//TODO
 
@@ -817,20 +965,21 @@ func TransRules() string {
 
 					if len(args) > 3 && args[3] != " " {
 						i := 2
-						var sqlstring = CamelCase(args[1])
+						var sqlstring = (args[1])
 						for string(sqlstring[len(sqlstring)-2]) != ")" {
-							sqlstring += "," + CamelCase(args[i])
+							sqlstring += "," + (args[i])
 							i++
 						}
+
 						args[1] = sqlstring
 						args[2] = strings.TrimRight(strings.TrimLeft(args[len(args)-1], "("), ")")
 					}
 
-					name := GetArgsSqlConstraint(args[0])
+					name := CamelCase(GetArgsSqlConstraint(args[0]))
 					sql := GetArgsSqlConstraint(args[1])
 					errorstring := GetArgsSqlConstraint(args[2])
 
-					result += "pool." + classname + "().AddSQLConstraint(" + name + " , " + sql + " , " + errorstring + ")\n"
+					result += "pool." + classname + "().AddSQLConstraint(\"" + name + "\" , \"" + sql + "\" , \"" + errorstring + "\")\n"
 
 					count += 1
 				}
@@ -850,8 +999,14 @@ func TransRules() string {
 				}
 
 				cut := strings.Split(rawcode[class][line][1], "(")
-				name := CamelCase(strings.Trim(cut[0], "_"))
+				name := cut[0]
 				getargs = GetArgsFunc(def)
+
+				if name[:4] == "_set" {
+					name = CamelCase("inverse" + name[4:])
+				} else {
+					name = CamelCase(strings.Trim(cut[0], "_"))
+				}
 
 				if len(rawcode[class][line-1][0]) > 5 && string(rawcode[class][line-1][0][:5]) == "@api." {
 					body += "  //"
@@ -914,6 +1069,33 @@ func CamelCase(onestring string) string {
 	return result
 }
 
+func CamelCaseForRelated(onestring string) string {
+
+	var result string
+
+	uppercase := true
+	for c := range onestring {
+
+		if uppercase == true {
+
+			result += string(unicode.ToUpper(rune(onestring[c])))
+			uppercase = false
+		} else if string(onestring[c]) == "." {
+
+			result += string(onestring[c])
+			uppercase = true
+		} else if string(onestring[c]) != "_" {
+
+			result += string(onestring[c])
+		} else {
+			uppercase = true
+		}
+
+	}
+
+	return result
+}
+
 func GetArgsSqlConstraint(arg string) string {
 
 	var result string
@@ -931,7 +1113,7 @@ func GetArgsSqlConstraint(arg string) string {
 	}
 
 	res := r.FindStringSubmatch(arg)
-	result = "\"" + CamelCase(res[1]) + "\""
+	result = res[1]
 
 	return result
 }
@@ -1019,5 +1201,40 @@ func TrimString(s string) string {
 			break
 		}
 	}
+	return result
+}
+
+func GenerateHexya() string {
+
+	var result string
+
+	result += "package " + packagename + "\n\n"
+	result += "import(\n\"github.com/hexya-erp/hexya/hexya/server\"\n)\n\n"
+	result += "const MODULE_NAME string = \"" + packagename + "\"\n\n"
+	result += "func init() {\nserver.RegisterModule(&server.Module{\nName:     MODULE_NAME,\nPostInit: func() {},\n})\n}"
+
+	return result
+}
+
+func CheckBuitInNames(classname string) string {
+
+	var result string
+
+	switch classname {
+
+	case "ResCompany":
+		result = "Company"
+	case "ResPartner":
+		result = "Partner"
+	case "ResCurrency":
+		result = "Currency"
+	case "ResCountryGroup":
+		result = "CountryGroup"
+	case "BaseConfigSettings":
+		result = "ConfigParameter"
+	default:
+		result = classname
+	}
+
 	return result
 }

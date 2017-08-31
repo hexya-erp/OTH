@@ -1,22 +1,25 @@
-package Translate
+package translate
 
 import (
 	"github.com/beevik/etree"
 )
 
-func TransXML(sourcedoc *etree.Document, docname string) {
+func TransXML(sourcedoc *etree.Document) *etree.Document {
 
 	doc := etree.NewDocument()
 	hexya := doc.CreateElement("hexya")
 	data := hexya.CreateElement("data")
 
 	var recs []*etree.Element
+	var path string
 
 	if sourcedoc.SelectElement("odoo").SelectElement("data") != nil {
-		recs = sourcedoc.FindElements("odoo/data/record")
+		path = "odoo/data"
 	} else {
-		recs = sourcedoc.FindElements("odoo/record")
+		path = "odoo"
 	}
+
+	recs = sourcedoc.FindElements(path + "/record")
 
 	for _, rec := range recs {
 
@@ -50,6 +53,7 @@ func TransXML(sourcedoc *etree.Document, docname string) {
 
 		case "ir.actions.act_window":
 
+			viewmodeset := false
 			action := data.CreateElement("action")
 
 			action.CreateAttr("id", rec.SelectAttr("id").Value)
@@ -69,6 +73,7 @@ func TransXML(sourcedoc *etree.Document, docname string) {
 
 				case "view_mode":
 					action.CreateAttr("view_mode", fi.Text())
+					viewmodeset = true
 
 				case "search_view_id":
 					action.CreateAttr("search_view_id", fi.SelectAttr("ref").Value)
@@ -88,6 +93,10 @@ func TransXML(sourcedoc *etree.Document, docname string) {
 
 				}
 
+			}
+
+			if viewmodeset == false {
+				action.CreateAttr("view_mode", "form")
 			}
 
 		case "ir.actions.act_window.view":
@@ -126,6 +135,24 @@ func TransXML(sourcedoc *etree.Document, docname string) {
 
 	}
 
+	actwindows := sourcedoc.FindElements(path + "/act_window")
+
+	for _ , act := range actwindows {
+
+		act_window := data.CreateElement("act_window")
+
+		act_window.CreateAttr("id", act.SelectAttrValue("id", ""))
+		act_window.CreateAttr("name", act.SelectAttrValue("name", ""))
+		act_window.CreateAttr("model", act.SelectAttrValue("res_model", ""))
+		act_window.CreateAttr("src_model", act.SelectAttrValue("src_model", ""))
+		act_window.CreateAttr("view_mode", act.SelectAttrValue("view_mode", ""))
+		act_window.CreateAttr("target", act.SelectAttrValue("target", ""))
+
+
+	}
+
+
 	doc.Indent(4)
-	doc.WriteToFile("ResultXML/" + docname)
+
+	return doc
 }
