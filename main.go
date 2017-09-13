@@ -12,7 +12,6 @@ import (
 
 func main() {
 
-	var gocode string
 	var filename string
 	root, _ := ioutil.ReadDir("OTH/source")
 
@@ -41,8 +40,7 @@ func main() {
 						}
 
 						if fp.Name() != "__init__.py" {
-							gocode = string(read)
-							gocode = translate.TransPyToGo(gocode, r.Name())
+							gocode := translate.TransPyToGo(string(read), r.Name())
 							filename = fp.Name()
 
 							errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/"+filename[:len(filename)-2]+"go", []byte(gocode), 0644)
@@ -80,8 +78,7 @@ func main() {
 							}
 
 							if wiz.Name() != "__init__.py" {
-								gocode = string(read)
-								gocode = translate.TransPyToGo(gocode, r.Name())
+								gocode := translate.TransPyToGo(string(read), r.Name())
 								filename = "wizard_" + wiz.Name()
 
 								errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/"+filename[:len(filename)-2]+"go", []byte(gocode), 0644)
@@ -100,6 +97,28 @@ func main() {
 							xml := translate.TransXML(doc)
 
 							xml.WriteToFile("OTH/result/" + r.Name() + "/resources/wizard_" + wiz.Name())
+						}
+					}
+
+				case "security":
+
+					filessec, _ := ioutil.ReadDir("OTH/source/" + r.Name() + "/security")
+
+					for _, sec := range filessec {
+
+						if sec.Name()[len(sec.Name())-3:] == "csv" {
+
+							read, errr := ioutil.ReadFile("OTH/source/" + r.Name() + "/security/" + sec.Name())
+							if errr != nil {
+								fmt.Print(errr)
+							}
+
+							csv:= translate.TransCSV(string(read),r.Name())
+
+							errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/security.go", []byte(csv), 0644)
+							if errw != nil {
+								fmt.Print(errw)
+							}
 						}
 					}
 

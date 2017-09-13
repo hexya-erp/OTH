@@ -4,6 +4,7 @@ import (
 	"github.com/beevik/etree"
 )
 
+//translate an odoo xml into an hexya xml
 func TransXML(sourcedoc *etree.Document) *etree.Document {
 
 	doc := etree.NewDocument()
@@ -137,7 +138,7 @@ func TransXML(sourcedoc *etree.Document) *etree.Document {
 
 	actwindows := sourcedoc.FindElements(path + "/act_window")
 
-	for _ , act := range actwindows {
+	for _, act := range actwindows {
 
 		act_window := data.CreateElement("act_window")
 
@@ -148,9 +149,7 @@ func TransXML(sourcedoc *etree.Document) *etree.Document {
 		act_window.CreateAttr("view_mode", act.SelectAttrValue("view_mode", ""))
 		act_window.CreateAttr("target", act.SelectAttrValue("target", ""))
 
-
 	}
-
 
 	doc.Indent(4)
 

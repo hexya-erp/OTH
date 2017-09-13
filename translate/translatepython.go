@@ -2,6 +2,7 @@ package translate
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -11,6 +12,7 @@ var rawcode [][][]string
 var imports string
 var defs []string
 
+//call the translates rules to build a string corresponding to the generated go code
 func TransPyToGo(str string, pack string) string {
 
 	var content string
@@ -30,7 +32,7 @@ func TransPyToGo(str string, pack string) string {
 
 }
 
-//Put the initial code into slice of slice of slice so it's split by classes > lines > words
+//Put the initial code into slice of slice of slice  so it split  the code like this : words < lines < class
 func GenerateSlices(str string) {
 
 	// preparing the document (delete space , etc..)
@@ -73,6 +75,7 @@ func GenerateSlices(str string) {
 
 }
 
+// build a slice of string containing the python functions
 func GenerateDefs(str string) {
 
 	cut := strings.Split(str, "@api.")
@@ -100,15 +103,18 @@ func TransRules() string {
 	var classname string
 
 	for class := range rawcode {
+
+		var inherit = false
+
 		for line := range rawcode[class] {
 
 			if rawcode[class][line][0] == "_inherit" {
 				classname = CheckBuitInNames(CamelCase(TrimString(string(rawcode[class][line][2]))))
+				inherit = true
 				break
 			} else if rawcode[class][line][0] == "_name" {
 				classname = CheckBuitInNames(CamelCase(TrimString(string(rawcode[class][line][2]))))
 				break
-				result += "\n\npool." + classname + "().DeclareModel()\n"
 			}
 		}
 
@@ -119,7 +125,7 @@ func TransRules() string {
 			if len(typemodel) > 1 && typemodel[1] == "TransientModel):" {
 				result += "\n\npool." + classname + "().DeclareTransientModel()\n"
 
-			} else if len(typemodel) > 1 && typemodel[1] == "Model):" {
+			} else if len(typemodel) > 1 && typemodel[1] == "Model):" && inherit == false {
 				result += "\n\npool." + classname + "().DeclareModel()\n"
 			}
 
@@ -163,22 +169,10 @@ func TransRules() string {
 						case "translate":
 							body += ", Translate: " + strings.ToLower(value[1])
 						case "compute":
-							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						case "index":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -195,9 +189,34 @@ func TransRules() string {
 							} else {
 								body += ", NoCopy: true"
 							}
-						case "oldname":
-							//TODO
+						case "related":
+							var result string
+							var i int = 0
+							related := CamelCaseForRelated(strings.Trim(value[1], "'"))
+							split := strings.Split(related, ".")
 
+							for s := range split {
+
+								if (split[s][len(split[s])-2:]) == "Id" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-2]
+
+								} else if (split[s][len(split[s])-3:]) == "Ids" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-3] + "s"
+
+								}
+
+								i++
+							}
+						case "inverse":
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+						case "store":
+							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						default:
 							//println("Char: " + value[0])
 						}
@@ -267,19 +286,7 @@ func TransRules() string {
 							body += ", OnDelete : models." + CamelCase(TrimString(value[1]))
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " , Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						case "index":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -318,16 +325,17 @@ func TransRules() string {
 							}
 							body += ", Related: \"" + result + "\""
 						case "store":
-							//TODO
+							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
-						case "auto_join":
-							//TODO
 						case "domain":
-							//TODO
-						case "oldname":
-							//TODO
-
+							body += "/*, Filter: " + value[1] + "*/"
+						case "compute":
+							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
+						case "inverse":
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+						case "company_dependent":
+							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						default:
 							//println("Many2One: " + value[0])
 						}
@@ -337,6 +345,7 @@ func TransRules() string {
 					result += readonly
 
 				case "One2many":
+					var readonly string
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
@@ -396,11 +405,27 @@ func TransRules() string {
 							} else {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
+						case "help":
+							help := GetHelpText(class, line)
+							body += " ,Help :\"" + help + "\""
+						case "required":
+							if len(value[1]) == 1 {
+								if value[1] == "0" {
+									body += ", Required: false"
+								} else {
+									body += ", Required: true"
+								}
+							} else {
+								body += ", Required : " + strings.ToLower(value[1])
+							}
+						case "readonly":
+							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
 						default:
 							//println("One2Many: " + value[0])
 						}
 					}
 					result += "pool." + classname + "().AddOne2ManyField(" + fieldname + ", models.ReverseFieldParams{" + body + "})\n"
+					result += readonly
 
 				case "Selection":
 					if selectionimportset == false {
@@ -438,8 +463,6 @@ func TransRules() string {
 					} else {
 						name = fieldname
 					}
-					body += "String :" + name
-
 					body += ", Selection : types.Selection{\n"
 
 					for s := range selectable {
@@ -489,11 +512,20 @@ func TransRules() string {
 							} else {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
+
+						case "implied_group":
+							body += "/*, ImpliedGroup :\"" + TrimString(value[1]) + "\"*/"
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
+
 						default:
 							//println("selection: " + value[0])
 						}
 					}
+
+					body = "String :" + name + body
 					result += "pool." + classname + "().AddSelectionField(" + fieldname + ", models.SelectionFieldParams{" + body + "})\n"
+
 				case "Integer":
 					var body string
 					args := GetArgsFields(class, line)
@@ -513,19 +545,7 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						case "default":
 							if string(value[1][0]) == "_" {
 								var def string
@@ -563,7 +583,7 @@ func TransRules() string {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
 						case "compute":
-							//body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
+							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						default:
 							//println("Integer: " + value[0])
@@ -609,24 +629,16 @@ func TransRules() string {
 								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
 							}
 						case "digits":
-							//TODO
+							if _, err := strconv.Atoi(value[1]); err == nil {
+								body += ",  Digits: nbutils.Digits{" + value[1] + "," + value[1] + "}"
+							} else {
+								body += "/*,  Digits:" + value[1] + "*/"
+							}
 						case "compute":
-							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						case "required":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -638,7 +650,38 @@ func TransRules() string {
 								body += ", Required : " + strings.ToLower(value[1])
 							}
 						case "company_dependent":
-							//TODO
+							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
+						case "inverse":
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+						case "store":
+							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
+						case "related":
+							var result string
+							var i int = 0
+							related := CamelCaseForRelated(strings.Trim(value[1], "'"))
+							split := strings.Split(related, ".")
+
+							for s := range split {
+
+								if (split[s][len(split[s])-2:]) == "Id" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-2]
+
+								} else if (split[s][len(split[s])-3:]) == "Ids" {
+									if i > 0 {
+										result += "."
+									}
+									result += split[s][:len(split[s])-3] + "s"
+
+								}
+
+								i++
+							}
+							body += ", Related: \"" + result + "\""
+						case "search":
+							body += "/*, Search: \"" + TrimString(value[1]) + "\"*/"
 
 						default:
 							//println("Float: " + value[0])
@@ -676,19 +719,7 @@ func TransRules() string {
 
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						default:
 							//println("Boolean: " + value[0])
 						}
@@ -733,9 +764,11 @@ func TransRules() string {
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "compute":
-							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "readonly":
 							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
+						case "ondelete":
+							body += "/*, OnDelete : models." + CamelCase(TrimString(value[1])) + "*/"
 						default:
 							//println("Many2Many: " + value[0])
 						}
@@ -761,28 +794,16 @@ func TransRules() string {
 						value := strings.Split(arg, "=")
 
 						switch strings.TrimSpace(value[0]) {
-						case "attachment":
-							//TODO
+
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						case "compute":
-							//body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "inverse":
-							//TODO
-
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+						case "attachment":
+							body += "/*, Attachment: " + strings.ToLower(TrimString(strings.TrimSpace(value[1]))) + "*/"
 						default:
 							//println("Binary: " + value[0])
 						}
@@ -809,19 +830,7 @@ func TransRules() string {
 
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						default:
 							//println("Date: " + value[0])
 						}
@@ -847,19 +856,7 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						default:
 							//println("DateTime: " + value[0])
 						}
@@ -887,19 +884,7 @@ func TransRules() string {
 							body += ", Translate: " + strings.ToLower(value[1])
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 						default:
 							//println("Text: " + value[0])
 						}
@@ -927,19 +912,7 @@ func TransRules() string {
 
 						case "help":
 							help := GetHelpText(class, line)
-
-							for i := range help {
-								if help[i][len(help[i])-4:] == "help" {
-
-									regex, err := regexp.Compile("\"")
-									if err != nil {
-										return err.Error()
-									}
-									cut := help[i+1]
-									cut = regex.ReplaceAllString(cut, "")
-									body += " ,Help :\"" + cut + "\""
-								}
-							}
+							body += " ,Help :\"" + help + "\""
 
 						default:
 							//println("Html: " + value[0])
@@ -1022,13 +995,11 @@ func TransRules() string {
 				if len(getargs) > 1 {
 					args = " , args struct{"
 					for g := range getargs {
-						if len(getargs[g]) > 4 {
-							if getargs[g][:4] != "Self" {
-								s := strings.Split(getargs[g], "=")
-								args += TrimString(s[0]) + " interface{}\n"
-							}
+						if strings.HasPrefix(getargs[g], "Self") {
+							continue
 						}
-
+						s := strings.Split(getargs[g], "=")
+						args += TrimString(s[0]) + " interface{}\n"
 					}
 					args += "}"
 				}
@@ -1046,6 +1017,7 @@ func TransRules() string {
 	return result
 }
 
+//Camel case for standard string
 func CamelCase(onestring string) string {
 
 	var result string
@@ -1069,6 +1041,7 @@ func CamelCase(onestring string) string {
 	return result
 }
 
+//Camel case for string in related fields
 func CamelCaseForRelated(onestring string) string {
 
 	var result string
@@ -1096,6 +1069,7 @@ func CamelCaseForRelated(onestring string) string {
 	return result
 }
 
+//return a string corresponding to the args of a sql constraint
 func GetArgsSqlConstraint(arg string) string {
 
 	var result string
@@ -1118,6 +1092,7 @@ func GetArgsSqlConstraint(arg string) string {
 	return result
 }
 
+//return a slice of arguments from the given field
 func GetArgsFields(c int, l int) []string {
 	var result []string
 	var s string
@@ -1136,12 +1111,14 @@ func GetArgsFields(c int, l int) []string {
 	}
 
 	s = strings.TrimSpace(s)
-	cut := strings.Split(s, "(")
+	cut := strings.SplitN(s, "(", 2)
 	result = strings.Split(cut[1], ",")
 
 	return result
+
 }
 
+//return a slice of the arguments from the given function
 func GetArgsFunc(s string) []string {
 	var args []string
 
@@ -1160,34 +1137,40 @@ func GetArgsFunc(s string) []string {
 	return args
 }
 
-func GetHelpText(c int, l int) []string {
-	var result []string
+//Get the text from an help argument by ignoring certain characters
+func GetHelpText(c int, l int) string {
 	var s string
 	var count = 0
-	ok := false
 
-	for ok == false {
+	for {
 		for w := range rawcode[c][l+count] {
 			s += " "
 			s += rawcode[c][l+count][w]
 
 		}
-		if string(s[len(s)-1]) != ")" && string(s[len(s)-2]) != "\"" {
-			count += 1
-		} else {
-			ok = true
+		if string(s[len(s)-1]) == ")" {
+			break
 		}
+		s = strings.TrimSpace(s) + "#~#~#"
+		count += 1
 	}
 
 	s = strings.TrimSpace(s)
 	s = strings.Trim(s, ")")
 
-	cut := strings.Split(s, "(")
-	result = strings.Split(cut[1], "=")
+	cut := strings.SplitN(s, "(", 2)
+	cut1 := strings.SplitN(cut[1], "help=", 2)
+	if len(cut1) <= 1 {
+		return ""
+	}
+	cut2 := strings.SplitN(cut1[1], "\",", 2)
+	help := cut2[0]
+	help = strings.Replace(help, "\"#~#~# \"", " ", -1)
 
-	return result
+	return TrimString(help)
 }
 
+// trim ' or " characters from a given string
 func TrimString(s string) string {
 
 	var result string
@@ -1204,6 +1187,7 @@ func TrimString(s string) string {
 	return result
 }
 
+// write the body of hexya.go
 func GenerateHexya() string {
 
 	var result string
@@ -1216,6 +1200,7 @@ func GenerateHexya() string {
 	return result
 }
 
+//verify the class name given and replace it by it's hexya equivalent if necessary
 func CheckBuitInNames(classname string) string {
 
 	var result string
