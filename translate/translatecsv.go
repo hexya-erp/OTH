@@ -49,6 +49,9 @@ func TransCSV(csvfile string, packagename string) string {
 			}
 		}
 
+		if group == "" {
+			group = "security.GroupEveryone"
+		}
 		if group[:4] == "Base" {
 			group = "base." + group[4:]
 		}

@@ -6,134 +6,160 @@ import (
 
 	"os"
 
+	"path/filepath"
+
 	"github.com/beevik/etree"
 	"github.com/hexya-erp/OTH/translate"
 )
 
 func main() {
+	if len(os.Args) != 3 {
+		fmt.Println(`
+OTH usage
+---------
+Scaffold an Hexya module from an Odoo module
+
+OTH <python-src-dir> <go-dest-dir>
+
+python-src-dir:  directory of an Odoo module
+go-dest-dir:     target directory for the Hexya module`)
+		os.Exit(1)
+	}
+
+	sourceDir, err := filepath.Abs(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	destDir, err := filepath.Abs(os.Args[2])
+	if err != nil {
+		panic(err)
+	}
+	if _, err := os.Stat(destDir); err == nil {
+		fmt.Println("Destination directory already exists", destDir)
+		os.Exit(1)
+	}
+
+	packageName := filepath.Base(destDir)
 
 	var filename string
-	root, _ := ioutil.ReadDir("OTH/source")
 
-	for _, r := range root {
+	content, _ := ioutil.ReadDir(filepath.Join(sourceDir))
 
-		content, _ := ioutil.ReadDir("OTH/source/" + r.Name())
+	os.Mkdir(filepath.Join(destDir), 0755)
+	os.Mkdir(filepath.Join(destDir, "resources"), 0755)
 
-		os.Mkdir("OTH/result/"+r.Name(), os.FileMode(0775))
-		os.Mkdir("OTH/result/"+r.Name()+"/resources", os.FileMode(0775))
+	for _, c := range content {
 
-		for _, c := range content {
+		if c.IsDir() {
 
-			if c.IsDir() {
+			switch c.Name() {
 
-				switch c.Name() {
+			case "models":
+				modelsDir := filepath.Join(sourceDir, "models")
 
-				case "models":
+				filespython, _ := ioutil.ReadDir(modelsDir)
 
-					filespython, _ := ioutil.ReadDir("OTH/source/" + r.Name() + "/models")
+				for _, fp := range filespython {
 
-					for _, fp := range filespython {
+					read, errr := ioutil.ReadFile(filepath.Join(modelsDir, fp.Name()))
+					if errr != nil {
+						fmt.Print(errr)
+					}
 
-						read, errr := ioutil.ReadFile("OTH/source/" + r.Name() + "/models/" + fp.Name())
+					if fp.Name() != "__init__.py" {
+						gocode := translate.TransPyToGo(string(read), packageName)
+						filename = fp.Name()
+
+						errw := ioutil.WriteFile(filepath.Join(destDir, filename[:len(filename)-2]+"go"), []byte(gocode), 0644)
+						if errw != nil {
+							fmt.Print(errw)
+						}
+					}
+				}
+
+			case "views":
+				viewsDir := filepath.Join(sourceDir, "views")
+				filesxml, _ := ioutil.ReadDir(viewsDir)
+				for _, fx := range filesxml {
+
+					doc := etree.NewDocument()
+					if err := doc.ReadFromFile(filepath.Join(viewsDir, fx.Name())); err != nil {
+						fmt.Print(err)
+					}
+
+					xml := translate.TransXML(doc, packageName)
+
+					xml.WriteToFile(filepath.Join(destDir, "resources", fx.Name()))
+				}
+
+			case "wizard":
+				wizardDir := filepath.Join(sourceDir, "wizard")
+				fileswiz, _ := ioutil.ReadDir(wizardDir)
+				for _, wiz := range fileswiz {
+
+					if wiz.Name()[len(wiz.Name())-2:] == "py" {
+
+						read, errr := ioutil.ReadFile(filepath.Join(wizardDir, wiz.Name()))
 						if errr != nil {
 							fmt.Print(errr)
 						}
 
-						if fp.Name() != "__init__.py" {
-							gocode := translate.TransPyToGo(string(read), r.Name())
-							filename = fp.Name()
+						if wiz.Name() != "__init__.py" {
+							gocode := translate.TransPyToGo(string(read), packageName)
+							filename = "wizard_" + wiz.Name()
 
-							errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/"+filename[:len(filename)-2]+"go", []byte(gocode), 0644)
+							errw := ioutil.WriteFile(filepath.Join(destDir, filename[:len(filename)-2]+"go"), []byte(gocode), 0644)
 							if errw != nil {
 								fmt.Print(errw)
 							}
 						}
-					}
 
-				case "views":
-
-					filesxml, _ := ioutil.ReadDir("OTH/source/" + r.Name() + "/views")
-					for _, fx := range filesxml {
+					} else if wiz.Name()[len(wiz.Name())-3:] == "xml" {
 
 						doc := etree.NewDocument()
-						if err := doc.ReadFromFile("OTH/source/" + r.Name() + "/views/" + fx.Name()); err != nil {
+						if err := doc.ReadFromFile(filepath.Join(wizardDir, wiz.Name())); err != nil {
 							fmt.Print(err)
 						}
 
-						xml := translate.TransXML(doc)
+						xml := translate.TransXML(doc, packageName)
 
-						xml.WriteToFile("OTH/result/" + r.Name() + "/resources/" + fx.Name())
+						xml.WriteToFile(filepath.Join(destDir, "resources", "wizard_"+wiz.Name()))
 					}
+				}
 
-				case "wizard":
+			case "security":
+				securityDir := filepath.Join(sourceDir, "security")
+				filessec, _ := ioutil.ReadDir(securityDir)
 
-					fileswiz, _ := ioutil.ReadDir("OTH/source/" + r.Name() + "/wizard")
-					for _, wiz := range fileswiz {
+				for _, sec := range filessec {
 
-						if wiz.Name()[len(wiz.Name())-2:] == "py" {
+					if sec.Name()[len(sec.Name())-3:] == "csv" {
 
-							read, errr := ioutil.ReadFile("OTH/source/" + r.Name() + "/wizard/" + wiz.Name())
-							if errr != nil {
-								fmt.Print(errr)
-							}
+						read, errr := ioutil.ReadFile(filepath.Join(securityDir, sec.Name()))
+						if errr != nil {
+							fmt.Print(errr)
+						}
 
-							if wiz.Name() != "__init__.py" {
-								gocode := translate.TransPyToGo(string(read), r.Name())
-								filename = "wizard_" + wiz.Name()
+						csv := translate.TransCSV(string(read), packageName)
 
-								errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/"+filename[:len(filename)-2]+"go", []byte(gocode), 0644)
-								if errw != nil {
-									fmt.Print(errw)
-								}
-							}
-
-						} else if wiz.Name()[len(wiz.Name())-3:] == "xml" {
-
-							doc := etree.NewDocument()
-							if err := doc.ReadFromFile("OTH/source/" + r.Name() + "/wizard/" + wiz.Name()); err != nil {
-								fmt.Print(err)
-							}
-
-							xml := translate.TransXML(doc)
-
-							xml.WriteToFile("OTH/result/" + r.Name() + "/resources/wizard_" + wiz.Name())
+						errw := ioutil.WriteFile(filepath.Join(destDir, "security.go"), []byte(csv), 0644)
+						if errw != nil {
+							fmt.Print(errw)
 						}
 					}
-
-				case "security":
-
-					filessec, _ := ioutil.ReadDir("OTH/source/" + r.Name() + "/security")
-
-					for _, sec := range filessec {
-
-						if sec.Name()[len(sec.Name())-3:] == "csv" {
-
-							read, errr := ioutil.ReadFile("OTH/source/" + r.Name() + "/security/" + sec.Name())
-							if errr != nil {
-								fmt.Print(errr)
-							}
-
-							csv:= translate.TransCSV(string(read),r.Name())
-
-							errw := ioutil.WriteFile("OTH/result/"+r.Name()+"/security.go", []byte(csv), 0644)
-							if errw != nil {
-								fmt.Print(errw)
-							}
-						}
-					}
-
 				}
 
 			}
 
 		}
 
-		hexya := translate.GenerateHexya()
-
-		err := ioutil.WriteFile("OTH/result/"+r.Name()+"/000-hexya.go", []byte(hexya), 0644)
-		if err != nil {
-			fmt.Print(err)
-		}
-
 	}
+
+	hexya := translate.GenerateHexya()
+
+	err = ioutil.WriteFile(filepath.Join(destDir, "000hexya.go"), []byte(hexya), 0644)
+	if err != nil {
+		fmt.Print(err)
+	}
+
 }

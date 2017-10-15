@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -118,6 +119,8 @@ func TransRules() string {
 			}
 		}
 
+		var fieldDeclarationStarted bool
+
 		for line := range rawcode[class] {
 
 			typemodel := strings.Split(rawcode[class][line][0], ".")
@@ -130,6 +133,11 @@ func TransRules() string {
 			}
 
 			if len(rawcode[class][line]) >= 3 && len(rawcode[class][line][2]) > 7 && rawcode[class][line][2][:7] == "fields." {
+
+				if !fieldDeclarationStarted {
+					result += fmt.Sprintf("pool.%s().AddFields(map[string]models.FieldDefinition{\n", classname)
+					fieldDeclarationStarted = true
+				}
 
 				cut := strings.Split(rawcode[class][line][2], "(")
 				fieldtype := cut[0][7:]
@@ -218,14 +226,13 @@ func TransRules() string {
 						case "store":
 							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						default:
-							//println("Char: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddCharField(" + fieldname + ", models.StringFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.CharField{%s},\n", fieldname, body)
 
 				case "Many2one":
 					var body string
-					var readonly string
 					args := GetArgsFields(class, line)
 					name := ""
 					args[1] = strings.TrimSpace(args[1])
@@ -278,7 +285,7 @@ func TransRules() string {
 								}
 							}
 
-							body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+							body += ", Default: Defaultfunc(models.Environment, models.FieldMap) interface{}{\n" +
 								"/*" + def + "*/\n" +
 								"return 0}"
 
@@ -298,7 +305,7 @@ func TransRules() string {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
 						case "readonly":
-							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
+							body += "/* readonly=true */ "
 						case "related":
 							var result string
 							var i int = 0
@@ -337,15 +344,13 @@ func TransRules() string {
 						case "company_dependent":
 							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						default:
-							//println("Many2One: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
-					result += "pool." + classname + "().AddMany2OneField(" + fieldname + ",models.ForeignKeyFieldParams{" + body + "})\n"
-					result += readonly
+					result += fmt.Sprintf("%s: models.Many2OneField{%s},\n", fieldname, body)
 
 				case "One2many":
-					var readonly string
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
@@ -400,10 +405,10 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+								body += ", Default: models.DefaultValue(" + value[1] + ")"
 							}
 						case "help":
 							help := GetHelpText(class, line)
@@ -419,13 +424,12 @@ func TransRules() string {
 								body += ", Required : " + strings.ToLower(value[1])
 							}
 						case "readonly":
-							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
+							body += "/* readonly */"
 						default:
-							//println("One2Many: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddOne2ManyField(" + fieldname + ", models.ReverseFieldParams{" + body + "})\n"
-					result += readonly
+					result += fmt.Sprintf("%s: models.One2ManyField{%s},\n", fieldname, body)
 
 				case "Selection":
 					if selectionimportset == false {
@@ -491,7 +495,7 @@ func TransRules() string {
 						case "help":
 							body += ", Help : \"" + TrimString(value[1]) + "\""
 						case "default":
-							body += ", Default: func(models.Environment, models.FieldMap) interface{} {return \"" + TrimString(value[1]) + "\"}"
+							body += ", Default: models.DefaultValue(\"" + TrimString(value[1]) + "\")"
 						case "required":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -519,12 +523,12 @@ func TransRules() string {
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 
 						default:
-							//println("selection: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
 
 					body = "String :" + name + body
-					result += "pool." + classname + "().AddSelectionField(" + fieldname + ", models.SelectionFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.SelectionField{%s},\n", fieldname, body)
 
 				case "Integer":
 					var body string
@@ -560,7 +564,7 @@ func TransRules() string {
 								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+								body += ", Default: models.DefaultValue(" + value[1] + ")"
 							}
 						case "required":
 							if len(value[1]) == 1 {
@@ -586,13 +590,10 @@ func TransRules() string {
 							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						default:
-							//println("Integer: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddIntegerField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
-
-				case "Datetime":
-					result += "pool." + classname + "().AddDateTimeField(" + fieldname + ", models.SimpleFieldParams{})\n"
+					result += fmt.Sprintf("%s: models.IntegerField{%s},\n", fieldname, body)
 
 				case "Float":
 					var body string
@@ -623,10 +624,10 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + value[1] + "}"
+								body += ", Default: models.DefaultValue(" + value[1] + ")"
 							}
 						case "digits":
 							if _, err := strconv.Atoi(value[1]); err == nil {
@@ -684,10 +685,10 @@ func TransRules() string {
 							body += "/*, Search: \"" + TrimString(value[1]) + "\"*/"
 
 						default:
-							//println("Float: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddFloatField(" + fieldname + ", models.FloatFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.FloatField{%s},\n", fieldname, body)
 
 				case "Boolean":
 					var body string
@@ -709,26 +710,25 @@ func TransRules() string {
 						case "default":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
-									body += ", Default: func(models.Environment, models.FieldMap) interface{} {return false}"
+									body += ", Default:models.DefaultValue(false)"
 								} else {
-									body += ", Default: func(models.Environment, models.FieldMap) interface{} {return true}"
+									body += ", Default: models.DefaultValue(true)"
 								}
 							} else {
-								body += ", Default: func(models.Environment, models.FieldMap) interface{} {return " + strings.ToLower(value[1]) + "}"
+								body += ", Default: models.DefaultValue(" + strings.ToLower(value[1]) + ")"
 							}
 
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
-							//println("Boolean: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddBooleanField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.BooleanField{%s},\n", fieldname, body)
 
 				case "Many2many":
 					var body string
-					var readonly string
 					args := GetArgsFields(class, line)
 					name := ""
 					args[1] = strings.TrimSpace(args[1])
@@ -765,17 +765,14 @@ func TransRules() string {
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "compute":
 							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
-						case "readonly":
-							readonly = "pool." + classname + "().Fields()." + strings.Trim(fieldname, "\"") + "().RevokeAccess(security.GroupEveryone, security.Write)\n"
 						case "ondelete":
 							body += "/*, OnDelete : models." + CamelCase(TrimString(value[1])) + "*/"
 						default:
-							//println("Many2Many: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
 					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
-					result += "pool." + classname + "().AddMany2ManyField(" + fieldname + ", models.Many2ManyFieldParams{" + body + "})\n"
-					result += readonly
+					result += fmt.Sprintf("%s: models.Many2ManyField{%s},\n", fieldname, body)
 
 				case "Binary":
 					var body string
@@ -805,10 +802,10 @@ func TransRules() string {
 						case "attachment":
 							body += "/*, Attachment: " + strings.ToLower(TrimString(strings.TrimSpace(value[1]))) + "*/"
 						default:
-							//println("Binary: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddBinaryField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.BinaryField{%s},\n", fieldname, body)
 
 				case "Date":
 					var body string
@@ -832,10 +829,10 @@ func TransRules() string {
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
-							//println("Date: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddDateField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.DateField{%s},\n", fieldname, body)
 
 				case "DateTime":
 					var body string
@@ -858,10 +855,10 @@ func TransRules() string {
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
-							//println("DateTime: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddDateTimeField(" + fieldname + ", models.SimpleFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.DateTimeField{%s},\n", fieldname, body)
 
 				case "Text":
 					var body string
@@ -886,11 +883,11 @@ func TransRules() string {
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
-							//println("Text: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
 
-					result += "pool." + classname + "().AddTextField(" + fieldname + " , models.StringFieldParams{" + body + "})\n"
+					result += fmt.Sprintf("%s: models.TextField{%s},\n", fieldname, body)
 
 				case "Html":
 					var body string
@@ -915,17 +912,22 @@ func TransRules() string {
 							body += " ,Help :\"" + help + "\""
 
 						default:
-							//println("Html: " + value[0])
+							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					result += "pool." + classname + "().AddHTMLField(" + fieldname + " , models.StringFieldParams{})\n"
+					result += fmt.Sprintf("%s: models.HTMLField{%s},\n", fieldname, body)
 
 				default:
-					//println(fieldtype)
+					panic(fmt.Errorf("Unknown fieldType: %s", fieldtype))
 
 				}
 
 			} else if rawcode[class][line][0] == "_sql_constraints" {
+				if fieldDeclarationStarted {
+					result += "\n})\n"
+					fieldDeclarationStarted = false
+				}
+
 				var count int = 1
 
 				for rawcode[class][line+count][0] != "]" {
@@ -950,14 +952,18 @@ func TransRules() string {
 
 					name := CamelCase(GetArgsSqlConstraint(args[0]))
 					sql := GetArgsSqlConstraint(args[1])
-					errorstring := GetArgsSqlConstraint(args[2])
+					errorstring := strings.Trim(GetArgsSqlConstraint(args[2]), "\"")
 
-					result += "pool." + classname + "().AddSQLConstraint(\"" + name + "\" , \"" + sql + "\" , \"" + errorstring + "\")\n"
+					result += fmt.Sprintf("pool.%s().AddSQLConstraint(\"%s\", \"%s\", \"%s\")\n", classname, name, sql, errorstring)
 
 					count += 1
 				}
 
 			} else if rawcode[class][line][0] == "def" {
+				if fieldDeclarationStarted {
+					result += "\n})\n"
+					fieldDeclarationStarted = false
+				}
 
 				var body string
 				var args string
@@ -1011,9 +1017,12 @@ func TransRules() string {
 			}
 
 		}
+		if fieldDeclarationStarted {
+			result += "\n})\n"
+			fieldDeclarationStarted = false
+		}
 
 	}
-
 	return result
 }
 
