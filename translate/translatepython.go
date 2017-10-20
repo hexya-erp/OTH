@@ -125,10 +125,10 @@ func TransRules() string {
 
 			typemodel := strings.Split(rawcode[class][line][0], ".")
 
-			if len(typemodel) > 1 && typemodel[1] == "TransientModel):" {
+			if len(typemodel) > 1 && typemodel[1] == "TransientModel):" && !inherit {
 				result += "\n\npool." + classname + "().DeclareTransientModel()\n"
 
-			} else if len(typemodel) > 1 && typemodel[1] == "Model):" && inherit == false {
+			} else if len(typemodel) > 1 && typemodel[1] == "Model):" && !inherit {
 				result += "\n\npool." + classname + "().DeclareModel()\n"
 			}
 
@@ -222,7 +222,7 @@ func TransRules() string {
 								i++
 							}
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "store":
 							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						default:
@@ -285,7 +285,7 @@ func TransRules() string {
 								}
 							}
 
-							body += ", Default: Defaultfunc(models.Environment, models.FieldMap) interface{}{\n" +
+							body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
 								"/*" + def + "*/\n" +
 								"return 0}"
 
@@ -340,7 +340,7 @@ func TransRules() string {
 						case "compute":
 							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "company_dependent":
 							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						default:
@@ -561,7 +561,7 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default : func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: models.DefaultValue(" + value[1] + ")"
@@ -653,7 +653,7 @@ func TransRules() string {
 						case "company_dependent":
 							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "store":
 							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						case "related":
@@ -710,7 +710,7 @@ func TransRules() string {
 						case "default":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
-									body += ", Default:models.DefaultValue(false)"
+									body += ", Default: models.DefaultValue(false)"
 								} else {
 									body += ", Default: models.DefaultValue(true)"
 								}
@@ -798,7 +798,7 @@ func TransRules() string {
 						case "compute":
 							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(strings.Trim(value[1][5:], "'"), "_")) + "()"
+							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "attachment":
 							body += "/*, Attachment: " + strings.ToLower(TrimString(strings.TrimSpace(value[1]))) + "*/"
 						default:
@@ -834,7 +834,7 @@ func TransRules() string {
 					}
 					result += fmt.Sprintf("%s: models.DateField{%s},\n", fieldname, body)
 
-				case "DateTime":
+				case "Datetime":
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
@@ -918,7 +918,7 @@ func TransRules() string {
 					result += fmt.Sprintf("%s: models.HTMLField{%s},\n", fieldname, body)
 
 				default:
-					panic(fmt.Errorf("Unknown fieldType: %s", fieldtype))
+					fmt.Println("Unknown fieldType: ", fieldtype)
 
 				}
 
@@ -1224,8 +1224,6 @@ func CheckBuitInNames(classname string) string {
 		result = "Currency"
 	case "ResCountryGroup":
 		result = "CountryGroup"
-	case "BaseConfigSettings":
-		result = "ConfigParameter"
 	default:
 		result = classname
 	}
