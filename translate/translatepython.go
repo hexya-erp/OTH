@@ -235,6 +235,11 @@ func TransRules() string {
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
+					if len(args) < 2 {
+						body += fmt.Sprintf("/* %s */", args)
+						result += fmt.Sprintf("%s: models.Many2OneField{%s},\n", fieldname, body)
+						break
+					}
 					args[1] = strings.TrimSpace(args[1])
 					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
 						name = "\"" + TrimString(strings.Trim(args[1], ")")) + "\""
@@ -456,8 +461,23 @@ func TransRules() string {
 
 					s = strings.TrimSpace(s)
 					cut := strings.Split(s, "[")
+					if len(cut) < 2 {
+						body += fmt.Sprintf("/*%s*/", s)
+						result += fmt.Sprintf("%s: models.SelectionField{%s},\n", fieldname, body)
+						break
+					}
 					cut2 := strings.Split(cut[1], "]")
+					if len(cut2) < 2 {
+						body += fmt.Sprintf("/*%s*/", s)
+						result += fmt.Sprintf("%s: models.SelectionField{%s},\n", fieldname, body)
+						break
+					}
 					args := strings.Split(cut2[1], ",")
+					if len(args) < 2 {
+						body += fmt.Sprintf("/*%s*/", s)
+						result += fmt.Sprintf("%s: models.SelectionField{%s},\n", fieldname, body)
+						break
+					}
 					selectable := strings.Split(cut2[0], "),")
 
 					name := ""
@@ -469,8 +489,8 @@ func TransRules() string {
 					}
 					body += ", Selection : types.Selection{\n"
 
-					for s := range selectable {
-						sec := strings.Split(selectable[s], ",")
+					for sub := range selectable {
+						sec := strings.Split(selectable[sub], ",")
 						if len(sec) > 2 {
 							i := 1
 							for len(sec)-2 >= i {
@@ -479,6 +499,10 @@ func TransRules() string {
 								i++
 							}
 							sec = sec[:len(sec)-(len(sec)-2)]
+						}
+						if len(sec) != 2 {
+							body += fmt.Sprintf("/*%s*/", selectable)
+							break
 						}
 						sec0 := TrimString(strings.Trim(strings.TrimSpace(sec[0]), "("))
 						sec1 := TrimString(strings.Trim(strings.TrimSpace(sec[1]), ")"))
@@ -595,7 +619,7 @@ func TransRules() string {
 					}
 					result += fmt.Sprintf("%s: models.IntegerField{%s},\n", fieldname, body)
 
-				case "Float":
+				case "Float", "Monetary":
 					var body string
 					args := GetArgsFields(class, line)
 					name := ""
@@ -950,11 +974,14 @@ func TransRules() string {
 						args[2] = strings.TrimRight(strings.TrimLeft(args[len(args)-1], "("), ")")
 					}
 
-					name := CamelCase(GetArgsSqlConstraint(args[0]))
-					sql := GetArgsSqlConstraint(args[1])
-					errorstring := strings.Trim(GetArgsSqlConstraint(args[2]), "\"")
-
-					result += fmt.Sprintf("pool.%s().AddSQLConstraint(\"%s\", \"%s\", \"%s\")\n", classname, name, sql, errorstring)
+					if len(args) == 3 {
+						name := CamelCase(GetArgsSqlConstraint(args[0]))
+						sql := GetArgsSqlConstraint(args[1])
+						errorstring := strings.Trim(GetArgsSqlConstraint(args[2]), "\"")
+						result += fmt.Sprintf("pool.%s().AddSQLConstraint(\"%s\", \"%s\", \"%s\")\n", classname, name, sql, errorstring)
+					} else {
+						result += fmt.Sprintf("pool.%s().AddSQLConstraint(/* %v */)\n", classname, args)
+					}
 
 					count += 1
 				}
@@ -981,7 +1008,7 @@ func TransRules() string {
 				name := cut[0]
 				getargs = GetArgsFunc(def)
 
-				if name[:4] == "_set" {
+				if len(name) > 4 && name[:4] == "_set" {
 					name = CamelCase("inverse" + name[4:])
 				} else {
 					name = CamelCase(strings.Trim(cut[0], "_"))
@@ -1081,7 +1108,6 @@ func CamelCaseForRelated(onestring string) string {
 //return a string corresponding to the args of a sql constraint
 func GetArgsSqlConstraint(arg string) string {
 
-	var result string
 	r := regexp.MustCompile(`'(.+)?'`)
 
 	for c := range arg {
@@ -1096,9 +1122,11 @@ func GetArgsSqlConstraint(arg string) string {
 	}
 
 	res := r.FindStringSubmatch(arg)
-	result = res[1]
+	if len(res) > 1 {
+		return res[1]
+	}
 
-	return result
+	return strings.Join(res, " ")
 }
 
 //return a slice of arguments from the given field
