@@ -157,13 +157,14 @@ func TransRules() string {
 					} else {
 						name = fieldname
 					}
-					body += "String :" + name
 
 					for i := range args {
 						arg := strings.Trim(args[i], ")")
 						value := strings.Split(arg, "=")
 
 						switch strings.TrimSpace(value[0]) {
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "required":
 							if len(value[1]) == 1 {
 								if value[1] == "0" {
@@ -229,6 +230,9 @@ func TransRules() string {
 							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
+					if name != "" {
+						body = "String :" + name + ", " + body
+					}
 					result += fmt.Sprintf("%s: models.CharField{%s},\n", fieldname, body)
 
 				case "Many2one":
@@ -243,8 +247,6 @@ func TransRules() string {
 					args[1] = strings.TrimSpace(args[1])
 					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
 						name = "\"" + TrimString(strings.Trim(args[1], ")")) + "\""
-					} else {
-						name = fieldname
 					}
 					foreignkey := CheckBuitInNames(CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'")))
 
@@ -253,15 +255,6 @@ func TransRules() string {
 
 					} else if (foreignkey[len(foreignkey)-3:]) == "Ids" {
 						foreignkey = foreignkey[:len(foreignkey)-3] + "s\""
-					}
-
-					if TrimString(odoofieldname[len(odoofieldname)-3:]) == "_id" {
-						body += " , JSON : \"" + odoofieldname + "\""
-						fieldname = fieldname[:len(fieldname)-3] + "\""
-
-					} else if TrimString(odoofieldname[len(odoofieldname)-4:]) == "_ids" {
-						body += " , JSON : \"" + odoofieldname + "\""
-						fieldname = fieldname[:len(fieldname)-4] + "s\""
 					}
 
 					for i := range args {
@@ -430,9 +423,14 @@ func TransRules() string {
 							}
 						case "readonly":
 							body += "/* readonly */"
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.One2ManyField{%s},\n", fieldname, body)
 
@@ -484,8 +482,6 @@ func TransRules() string {
 					args[1] = strings.TrimSpace(args[1])
 					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
 						name = "\"" + TrimString(args[1]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += ", Selection : types.Selection{\n"
 
@@ -551,7 +547,9 @@ func TransRules() string {
 						}
 					}
 
-					body = "String :" + name + body
+					if name != "" {
+						body = "String :" + name + ", " + body
+					}
 					result += fmt.Sprintf("%s: models.SelectionField{%s},\n", fieldname, body)
 
 				case "Integer":
@@ -561,8 +559,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -613,9 +609,14 @@ func TransRules() string {
 						case "compute":
 							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.IntegerField{%s},\n", fieldname, body)
 
@@ -627,8 +628,6 @@ func TransRules() string {
 
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -708,9 +707,14 @@ func TransRules() string {
 						case "search":
 							body += "/*, Search: \"" + TrimString(value[1]) + "\"*/"
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.FloatField{%s},\n", fieldname, body)
 
@@ -721,8 +725,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -742,12 +744,17 @@ func TransRules() string {
 								body += ", Default: models.DefaultValue(" + strings.ToLower(value[1]) + ")"
 							}
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.BooleanField{%s},\n", fieldname, body)
 
@@ -758,8 +765,6 @@ func TransRules() string {
 					args[1] = strings.TrimSpace(args[1])
 					if string(args[1][0]) == "'" || string(args[1][0]) == "\"" {
 						name = "\"" + TrimString(args[1]) + "\""
-					} else {
-						name = fieldname
 					}
 
 					foreignkey := CheckBuitInNames(CamelCase(strings.Trim(strings.TrimSpace(args[0]), "'")))
@@ -805,8 +810,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -816,6 +819,8 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
@@ -829,6 +834,9 @@ func TransRules() string {
 							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
+					if name != "" {
+						body = "String :" + name + ", " + body
+					}
 					result += fmt.Sprintf("%s: models.BinaryField{%s},\n", fieldname, body)
 
 				case "Date":
@@ -838,8 +846,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -849,12 +855,17 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.DateField{%s},\n", fieldname, body)
 
@@ -865,8 +876,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -875,12 +884,17 @@ func TransRules() string {
 						value := strings.Split(arg, "=")
 
 						switch strings.TrimSpace(value[0]) {
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.DateTimeField{%s},\n", fieldname, body)
 
@@ -891,8 +905,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -903,6 +915,8 @@ func TransRules() string {
 						switch strings.TrimSpace(value[0]) {
 						case "translate":
 							body += ", Translate: " + strings.ToLower(value[1])
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
@@ -910,7 +924,9 @@ func TransRules() string {
 							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-
+					if name != "" {
+						body = "String :" + name + ", " + body
+					}
 					result += fmt.Sprintf("%s: models.TextField{%s},\n", fieldname, body)
 
 				case "Html":
@@ -920,8 +936,6 @@ func TransRules() string {
 					args[0] = strings.TrimSpace(args[0])
 					if string(args[0][0]) == "'" || string(args[0][0]) == "\"" {
 						name = "\"" + TrimString(args[0]) + "\""
-					} else {
-						name = fieldname
 					}
 					body += "String :" + name
 
@@ -931,6 +945,8 @@ func TransRules() string {
 
 						switch strings.TrimSpace(value[0]) {
 
+						case "string":
+							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
@@ -938,6 +954,9 @@ func TransRules() string {
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
+					}
+					if name != "" {
+						body = "String :" + name + ", " + body
 					}
 					result += fmt.Sprintf("%s: models.HTMLField{%s},\n", fieldname, body)
 
@@ -1026,16 +1045,16 @@ func TransRules() string {
 				body += "  /*def " + def + "*/"
 
 				if len(getargs) > 1 {
-					args = " , args struct{"
+					args = " ,"
 					for g := range getargs {
 						if strings.HasPrefix(getargs[g], "Self") {
 							continue
 						}
 						s := strings.Split(getargs[g], "=")
-						args += TrimString(s[0]) + " interface{}\n"
+						args += strings.ToLower(TrimString(s[0])) + " interface{},"
 					}
-					args += "}"
 				}
+				args = strings.TrimRight(args, ",")
 
 				result += "pool." + classname + "().Methods()." + name + "().DeclareMethod(" +
 					"\n`" + name + "` ," +
