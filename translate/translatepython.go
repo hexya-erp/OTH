@@ -283,7 +283,7 @@ func TransRules() string {
 								}
 							}
 
-							body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
+							body += ", Default: func(env models.Environment) interface{}{\n" +
 								"/*" + def + "*/\n" +
 								"return 0}"
 
@@ -403,7 +403,7 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(env models.Environment) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: models.DefaultValue(" + value[1] + ")"
@@ -581,7 +581,7 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(env models.Environment) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: models.DefaultValue(" + value[1] + ")"
@@ -647,7 +647,7 @@ func TransRules() string {
 									}
 								}
 
-								body += ", Default: func(models.Environment, models.FieldMap) interface{}{\n" +
+								body += ", Default: func(env models.Environment) interface{}{\n" +
 									"/*" + def + "*/return 0}"
 							} else {
 								body += ", Default: models.DefaultValue(" + value[1] + ")"
