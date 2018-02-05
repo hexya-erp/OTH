@@ -61,21 +61,21 @@ func TransCSV(csvfile string, packagename string) string {
 		}
 
 		if read == true && write == true {
-			content += "pool." + model + "().Methods().AllowAllToGroup(" + group + ")\n"
+			content += "h." + model + "().Methods().AllowAllToGroup(" + group + ")\n"
 
 		} else {
 
 			if read == true {
-				content += "pool." + model + "().Methods().Load().AllowGroup(" + group + ")\n"
+				content += "h." + model + "().Methods().Load().AllowGroup(" + group + ")\n"
 			}
 			if write == true {
-				content += "pool." + model + "().Methods().Write().AllowGroup(" + group + ")\n"
+				content += "h." + model + "().Methods().Write().AllowGroup(" + group + ")\n"
 			}
 			if create == true {
-				content += "pool." + model + "().Methods().Create().AllowGroup(" + group + ")\n"
+				content += "h." + model + "().Methods().Create().AllowGroup(" + group + ")\n"
 			}
 			if unlink == true {
-				content += "pool." + model + "().Methods().Unlink().AllowGroup(" + group + ")\n"
+				content += "h." + model + "().Methods().Unlink().AllowGroup(" + group + ")\n"
 			}
 		}
 

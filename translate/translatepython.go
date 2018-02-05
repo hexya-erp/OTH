@@ -126,16 +126,16 @@ func TransRules() string {
 			typemodel := strings.Split(rawcode[class][line][0], ".")
 
 			if len(typemodel) > 1 && typemodel[1] == "TransientModel):" && !inherit {
-				result += "\n\npool." + classname + "().DeclareTransientModel()\n"
+				result += "\n\nh." + classname + "().DeclareTransientModel()\n"
 
 			} else if len(typemodel) > 1 && typemodel[1] == "Model):" && !inherit {
-				result += "\n\npool." + classname + "().DeclareModel()\n"
+				result += "\n\nh." + classname + "().DeclareModel()\n"
 			}
 
 			if len(rawcode[class][line]) >= 3 && len(rawcode[class][line][2]) > 7 && rawcode[class][line][2][:7] == "fields." {
 
 				if !fieldDeclarationStarted {
-					result += fmt.Sprintf("pool.%s().AddFields(map[string]models.FieldDefinition{\n", classname)
+					result += fmt.Sprintf("h.%s().AddFields(map[string]models.FieldDefinition{\n", classname)
 					fieldDeclarationStarted = true
 				}
 
@@ -178,7 +178,7 @@ func TransRules() string {
 						case "translate":
 							body += ", Translate: " + strings.ToLower(value[1])
 						case "compute":
-							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: h." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
@@ -223,7 +223,7 @@ func TransRules() string {
 								i++
 							}
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
+							body += ", Inverse: h." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "store":
 							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						default:
@@ -336,16 +336,16 @@ func TransRules() string {
 						case "domain":
 							body += "/*, Filter: " + value[1] + "*/"
 						case "compute":
-							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
+							body += ", Compute : h." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
+							body += ", Inverse: h." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "company_dependent":
 							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
+					body = "String :" + name + " , RelationModel: h." + foreignkey + "()" + body
 					result += fmt.Sprintf("%s: models.Many2OneField{%s},\n", fieldname, body)
 
 				case "One2many":
@@ -361,7 +361,7 @@ func TransRules() string {
 						name = fieldname
 					}
 					body += "String :" + name
-					body += " ,RelationModel : pool." + CheckBuitInNames(CamelCase(TrimString(strings.TrimSpace(args[0])))) + "()"
+					body += " ,RelationModel : h." + CheckBuitInNames(CamelCase(TrimString(strings.TrimSpace(args[0])))) + "()"
 
 					if (foreignkey[len(foreignkey)-2:]) == "Id" {
 						foreignkey = foreignkey[:len(foreignkey)-2]
@@ -607,7 +607,7 @@ func TransRules() string {
 								body += ", Index: " + strings.ToLower(value[1])
 							}
 						case "compute":
-							body += ", Compute : pool." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
+							body += ", Compute : h." + classname + "().Methods()." + CamelCase(strings.Trim(TrimString(value[1]), "_")) + "()"
 
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
@@ -659,7 +659,7 @@ func TransRules() string {
 								body += "/*,  Digits:" + value[1] + "*/"
 							}
 						case "compute":
-							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: h." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "help":
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
@@ -676,7 +676,7 @@ func TransRules() string {
 						case "company_dependent":
 							body += "/*, CompanyDependent : " + strings.ToLower(value[1]) + "*/"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
+							body += ", Inverse: h." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "store":
 							body += ", Stored: " + strings.ToLower(TrimString(strings.TrimSpace(value[1])))
 						case "related":
@@ -793,14 +793,14 @@ func TransRules() string {
 						case "string":
 							name = "\"" + TrimString(strings.TrimSpace(value[1])) + "\""
 						case "compute":
-							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: h." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "ondelete":
 							body += "/*, OnDelete : models." + CamelCase(TrimString(value[1])) + "*/"
 						default:
 							body += fmt.Sprintf("/*%s*/", value)
 						}
 					}
-					body = "String :" + name + " , RelationModel: pool." + foreignkey + "()" + body
+					body = "String :" + name + " , RelationModel: h." + foreignkey + "()" + body
 					result += fmt.Sprintf("%s: models.Many2ManyField{%s},\n", fieldname, body)
 
 				case "Binary":
@@ -825,9 +825,9 @@ func TransRules() string {
 							help := GetHelpText(class, line)
 							body += " ,Help :\"" + help + "\""
 						case "compute":
-							body += ", Compute: pool." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
+							body += ", Compute: h." + classname + "().Methods()." + CamelCase(strings.Trim(strings.Trim(value[1], "'"), "_")) + "()"
 						case "inverse":
-							body += ", Inverse: pool." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
+							body += ", Inverse: h." + classname + "().Methods().Inverse" + CamelCase(strings.Trim(fieldname, "'\"")) + "()"
 						case "attachment":
 							body += "/*, Attachment: " + strings.ToLower(TrimString(strings.TrimSpace(value[1]))) + "*/"
 						default:
@@ -997,9 +997,9 @@ func TransRules() string {
 						name := CamelCase(GetArgsSqlConstraint(args[0]))
 						sql := GetArgsSqlConstraint(args[1])
 						errorstring := strings.Trim(GetArgsSqlConstraint(args[2]), "\"")
-						result += fmt.Sprintf("pool.%s().AddSQLConstraint(\"%s\", \"%s\", \"%s\")\n", classname, name, sql, errorstring)
+						result += fmt.Sprintf("h.%s().AddSQLConstraint(\"%s\", \"%s\", \"%s\")\n", classname, name, sql, errorstring)
 					} else {
-						result += fmt.Sprintf("pool.%s().AddSQLConstraint(/* %v */)\n", classname, args)
+						result += fmt.Sprintf("h.%s().AddSQLConstraint(/* %v */)\n", classname, args)
 					}
 
 					count += 1
@@ -1056,9 +1056,9 @@ func TransRules() string {
 				}
 				args = strings.TrimRight(args, ",")
 
-				result += "pool." + classname + "().Methods()." + name + "().DeclareMethod(" +
+				result += "h." + classname + "().Methods()." + name + "().DeclareMethod(" +
 					"\n`" + name + "` ," +
-					"\nfunc (rs pool." + classname + "Set" + args + "){\n" +
+					"\nfunc (rs h." + classname + "Set" + args + "){\n" +
 					body + "})\n"
 			}
 
