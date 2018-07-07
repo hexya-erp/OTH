@@ -202,7 +202,7 @@ func AbsolutizeExternalID(id, packName string) string {
 	}
 	tokens := strings.Split(id, ".")
 	if len(tokens) == 1 {
-		packPrefix := strutils.SnakeCaseString(packName)
+		packPrefix := strutils.SnakeCase(packName)
 		return fmt.Sprintf("%s_%s", packPrefix, id)
 	}
 	if len(tokens) == 2 {
