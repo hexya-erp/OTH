@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hexya>
+    <data>
+        <view id="translator_start_view" model="Translator">
+            <form create="false" edit="false">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button string="Translate" name="StartHextranslate" type="object"
+                                class="oe_stat_button oe_inline oe_right"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="ModuleName"/>
+                            <field name="GoModulePath"/>
+                        </group>
+                        <group>
+                            <field name="OutputPath"/>
+                            <field name="input_path"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page name="Configuration" string="Configuration">
+                            <group>
+                                <field name="log_lvl"/>
+                            </group>
+                        </page>
+                        <page name="Translation" string="Translation">
+                            <group>
+                                <field name="translate_python"/>
+                            </group>
+                        </page>
+                        <page name="PostTranslation" string="Post Translation">
+                            <group>
+                                <field name="post_generate"/>
+                            </group>
+                            <group>
+                                <field name="post_run" attrs="{'invisible': [('post_generate', '=', False)]}"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </view>
+
+        <action id="translator_start_action" name="HexTranslate" model="Translator"
+                view_mode="tree,form" type="ir.actions.act_window">
+            <help>
+                <p class="oe_view_nocontent_create">Click on "Create" to start a module translation</p>
+            </help>
+        </action>
+        <menuitem id="translator_main_menu" name="HexTranslate"
+                  action="translator_start_action"/>
+    </data>
+</hexya>

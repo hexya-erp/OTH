@@ -1,0 +1,21 @@
+Modules = [
+    "github.com/hexya-addons/web"$$MODULEPATH$$
+]
+LogStdout = true
+#LogFile = ""
+#LogLevel = "info"
+#Debug = false
+#DataDir = ""
+
+[DB]
+#Driver = "postgres"
+#Host = "/var/run/postgresql"
+#Port = 5432
+#User = ""
+#Password = ""
+#Name = "hexyaoth"
+
+[Server]
+#Languages = ["fr"]
+#Interface = ""
+#Port = 8080
