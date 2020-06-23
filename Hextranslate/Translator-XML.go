@@ -155,7 +155,7 @@ func WriteHexyaData(genRecords []GenericRecord) []byte {
 }
 
 func WriteHexyaXML(path string, genRecords []GenericRecord) {
-	path = string(append(append([]byte(genArgs.outputPath), []byte("/ressources")...), []byte(strings.TrimPrefix(path, genArgs.inputPath))...))
+	path = string(append(append([]byte(genArgs.outputPath), []byte("/resources")...), []byte(strings.TrimPrefix(path, genArgs.inputPath))...))
 	CreateDir(filepath.Dir(path))
 	err := ioutil.WriteFile(path, WriteHexyaData(genRecords), 0777)
 	if err != nil {

@@ -84,6 +84,9 @@ func InitFuncMap() {
 }
 
 func getFunctionName(model, methName string) string {
+	if model == "" {
+		return methName
+	}
 	return fmt.Sprintf("%s_%s", strings.ToLower(model[:1])+model[1:], methName)
 }
 
@@ -375,9 +378,12 @@ func translateBinOpMod(node map[string]interface{}) interface{} {
 }
 
 func translateFunctionDef(node map[string]interface{}) interface{} {
-	hf := transHexyaFuncDef(node)
-	hexyaModels[len(hexyaModels)-1].funcs = append(hexyaModels[len(hexyaModels)-1].funcs, hf)
-	return [][]byte{}
+	if curModelName != "" {
+		hf := transHexyaFuncDef(node)
+		hexyaModels[len(hexyaModels)-1].funcs = append(hexyaModels[len(hexyaModels)-1].funcs, hf)
+		return [][]byte{}
+	}
+	return transGenericFuncDef(node)
 }
 
 func translateAssign(node map[string]interface{}) interface{} {
@@ -394,13 +400,13 @@ func translateAssign(node map[string]interface{}) interface{} {
 
 func translateClassDef(node map[string]interface{}) interface{} {
 	inheritName := GetClassParam(node)
-	var out [][]byte
 	switch inheritName {
 	case "odoo.models.Model", "odoo.models.AbstractModel", "odoo.models.TransientModel":
 		transClassDefModel(node)
 		return [][]byte{}
 	default:
-		return append(out, transGenericClass(node)...)
+		res := transGenericClass(node)
+		return res
 	}
 }
 
@@ -788,10 +794,6 @@ func getSqlConstraints(sl []interface{}) string {
 
 func transGenericClass(node map[string]interface{}) [][]byte {
 	var out [][]byte
-	if isInInit {
-		out = append(out, []byte("}"))
-		isInInit = false
-	}
 	for _, p := range Sl(node["body"]) {
 		part := Node(p)
 		typ := part["type"].(string)
@@ -799,7 +801,7 @@ func transGenericClass(node map[string]interface{}) [][]byte {
 			fmt.Printf("Error: type %s not handled. %s\n", typ, conf.Sdump(part["loc"]))
 			s, _ := json.Marshal(part)
 			out = append(out, []byte("/*"))
-			out = append(out, []byte(s))
+			out = append(out, s)
 			out = append(out, []byte("*/"))
 			continue
 		}
@@ -824,6 +826,7 @@ func transClassDefModel(node map[string]interface{}) {
 		}
 		funcMap[typ](part)
 	}
+	curModelName = ""
 }
 
 func isFieldDeclaration(node map[string]interface{}) bool {
@@ -877,7 +880,7 @@ func translatePyFile(pyFile map[string]interface{}) []byte {
 			out.Write(bytes.Join(Comment(GetRawText(node["loc"])), []byte{'\n'}))
 			continue
 		}
-		funcMap[typ](node)
+		out.Write(bytes.Join(funcMap[typ](node).([][]byte), []byte{'\n'}))
 	}
 	for _, hm := range hexyaModels {
 		out.WriteString(fmt.Sprintf("var fields_%s = map[string]models.FieldDefinition {\n", hm.name))
@@ -921,6 +924,8 @@ func translatePyFile(pyFile map[string]interface{}) []byte {
 }
 
 func TranslatePy2(filePath string) {
+	// reset hexyaModels if it already existed
+	hexyaModels = []*hexyaModel{}
 	// fix pyfile mistakes
 	text, err := ioutil.ReadFile(filePath)
 	if err != nil {
