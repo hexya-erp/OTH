@@ -144,6 +144,11 @@ github.com/hexya-addons/web v0.0.43 h1:Ni6r0Fn6ic0d0+ejgeZ8p5tRcHNwUxC9e3d2gIp7y
 github.com/hexya-addons/web v0.0.43/go.mod h1:MP9dzTm/7InkZWBIEaz3CCP/zCGHrHThzW5Wytcwydc=
 github.com/hexya-addons/web v0.1.1 h1:M1wVgFm4X7gMwoiCBKuo8VDD5WpFIY7A9b+09iqbdws=
 github.com/hexya-addons/web v0.1.1/go.mod h1:olnX4YVb2hxSoSn6/MV/XHDCVgXzlN/QoppuJ01zfE8=
+github.com/hexya-addons/web v0.1.3 h1:K+PzbUuG34LD/uLOEjg0To5zR+KPOYXnAnRSGplSsow=
+github.com/hexya-addons/web v0.1.3/go.mod h1:nwRMGfz7Se1r3OXvnfAwrXL14KFLOiVwjp1HnMSC4mw=
+github.com/hexya-addons/web v0.1.5/go.mod h1:t9IQacVbC1JmRKWn0GlCG9G6ePCcd8r/eQf/0tjWhqA=
+github.com/hexya-addons/web v0.1.7 h1:8gw5jMp9JWLxW9KVeq+EyNkjuyql9NhfXkYNGbNivMw=
+github.com/hexya-addons/web v0.1.7/go.mod h1:xXiNy+SSjSlthAOSceAZ79tqp7PDCCDH7PhKIFRfDsQ=
 github.com/hexya-addons/webKanban v0.0.2/go.mod h1:aAGXzJoPfFVWlg/E+alMxnY1FHNNgvHsC/h7ueRJKg4=
 github.com/hexya-addons/webKanban v0.0.7/go.mod h1:5FhDwSwqYfrZuk9kfcI7m2wJK6ngBJTZcGreCoedvJA=
 github.com/hexya-addons/webKanban v0.0.14 h1:J9758G7EpNHKVd/cZ7T6Kd2aTsyL0sSFbO3QntP9FsA=
@@ -164,7 +169,14 @@ github.com/hexya-erp/hexya v0.1.1 h1:pGEw++6WgpWfcbfGUiOnDJ0zIyNLGgxo721Z1RVKUSI
 github.com/hexya-erp/hexya v0.1.1/go.mod h1:tyLgrWGACmueoP6cEm5jTJkQexER25JCsrCMQAxDR9E=
 github.com/hexya-erp/hexya v0.1.2 h1:W9ybcRzn/RasNjWzAE1ch56jD+jPoR/07Yy/JmLUmZQ=
 github.com/hexya-erp/hexya v0.1.2/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
+github.com/hexya-erp/hexya v0.1.3 h1:iTb7citJxpShe2Df8rvusFnThDiRZbZWf4LOdZ1j4+E=
+github.com/hexya-erp/hexya v0.1.3/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
+github.com/hexya-erp/hexya v0.1.5/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
+github.com/hexya-erp/hexya v0.1.6/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
+github.com/hexya-erp/hexya v0.1.7 h1:hzXCNyv6N+GmqYCcnrOBaoa8k2oUXckCxWJW9hQ7NkA=
+github.com/hexya-erp/hexya v0.1.7/go.mod h1:1Ug/5+buVhoRR+VFcFMCz2Tbj80EtQVqAuTQgqUGtTI=
 github.com/hexya-erp/pool v1.0.0/go.mod h1:18sZNrVGAnY2aJ/rIZsvvd9Jfi8yMjBi4Xogx8PjVXw=
+github.com/hexya-erp/pool v1.0.2/go.mod h1:DucbMZy2Dy4JSDgyYR8PIi8wgSmH1E6VV1dJE6WKRY8=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jmoiron/sqlx v1.2.0 h1:41Ip0zITnmWNR/vHV+S4m+VoUivnWY5E4OJfLZjCJMA=
 github.com/jmoiron/sqlx v1.2.0/go.mod h1:1FEQNm3xlJgrMD+FBdI9+xvCksHtbpVBBw5dYhBSsks=

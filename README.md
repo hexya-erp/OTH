@@ -1,8 +1,9 @@
 # OTH
-#####Odoo To Hexya
+
+##### Odoo To Hexya
 translate an Odoo module into a Hexya module at best as it can
 
-###Usage
+### Usage
 go to the 'Launcher' directory.
 
 Compile the launcher using `go build`
